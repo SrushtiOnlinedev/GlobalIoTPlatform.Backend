@@ -2,6 +2,7 @@
 
 Backend API for the Global IoT Platform.
 
+## Contents
 
 1. Project Details
 2. Prerequisites
@@ -10,16 +11,14 @@ Backend API for the Global IoT Platform.
 5. Database Structure
 6. Role Model
 7. Run the API
-8. Customer Registration
-9. Registration Flow
-10. Account Type Behavior
-11. Registration Response
-12. Registration Tests
-13. Database Verification
-14. Directory Structure
-15. Git and Environment Rules
-16. Complete Developer Setup
-17. Future Scope
+8. API Documentation
+9. API Testing
+10. Database Verification
+11. Project Structure
+12. Git and Environment Rules
+13. Complete Developer Setup
+14. Authentication Development Status
+15. Future Scope
 
 
 ## 1. Project Details
@@ -36,10 +35,13 @@ The current backend includes:
 - Swagger / OpenAPI documentation
 - bcrypt password hashing
 - Customer registration
+- Customer login
+- JWT access-token generation
+- Last-login tracking
 - Customer-specific roles and permissions
 - Health-check API
 
-Authentication login/JWT, email verification, and other modules will be added in later stages.
+Authentication features such as email verification, protected profile APIs, authorization middleware, password management, and session management will be added in later stages.
 
 ### Technology Stack
 
@@ -47,8 +49,9 @@ Authentication login/JWT, email verification, and other modules will be added in
 - Express.js
 - MySQL
 - mysql2
-- Zod(schema validation library)
+- Zod (schema validation library)
 - bcrypt
+- jsonwebtoken
 - Swagger JSDoc
 - Swagger UI Express
 
@@ -76,7 +79,7 @@ Verify:
 ```bash
 node --version
 npm --version
-```
+````
 
 MySQL must be running and the configured MySQL user must have permission to create the project database and tables.
 
@@ -121,6 +124,9 @@ DB_PORT=3306
 DB_USER=your_mysql_user
 DB_PASSWORD=your_mysql_password
 DB_NAME=GlobalIoTPlatformDB
+
+JWT_SECRET=your_jwt_secret_here
+JWT_EXPIRES_IN=1h
 ```
 
 `.env` is local and must not be committed.
@@ -209,7 +215,7 @@ user_types
 users
 ```
 
-### Main Relationship
+### Main Relationships
 
 ```text
 customers
@@ -236,8 +242,9 @@ account_type_upgrade_requests
 ```text
 Customer Account Type → type of customer account
 User Type             → type of user
-Role                  → actions available to the user
+Role                  → user access definition
 Permission            → individual allowed action
+Login Account         → authentication credentials
 ```
 
 The default account type is currently `End User`.
@@ -266,8 +273,8 @@ Customer B
 During registration, the first user receives:
 
 ```text
-User Type: Customer Owner
-Role: Customer Super Admin
+User Type = Customer Owner
+Role      = Customer Super Admin
 ```
 
 The customer-specific Super Admin role receives all currently active permissions.
@@ -288,13 +295,13 @@ Expected:
 Server running at http://localhost:3000
 ```
 
-Swagger:
+### Swagger
 
 ```text
 http://localhost:3000/api-docs
 ```
 
-Health API:
+### Health API
 
 ```http
 GET /api/health
@@ -304,367 +311,63 @@ Swagger can be used as the main development API testing interface.
 
 ---
 
-# API Documentation
+## 8. API Documentation
 
-## 8. Customer Registration
+### Authentication APIs
 
-### Endpoint
+The current authentication APIs are:
 
 ```http
 POST /api/auth/register
+POST /api/auth/login
 ```
 
-### Authentication
+Detailed authentication documentation is available here:
 
-Not required.
+[Authentication Documentation](docs/AUTHENTICATION.md)
 
-### Purpose
+The authentication documentation contains:
 
-Creates:
-
-- Customer
-- First customer user
-- Customer Super Admin role
-- Role permissions
-- User-role assignment
-- Customer login account
-- Optional account-type upgrade request
-
-### Request
-
-```json
-{
-  "customerName": "Amit Patel",
-  "requestedAccountType": "Business",
-  "customerEmail": "amit.customer@example.com",
-  "mobile": "9876543210",
-  "address": "123 Main Road",
-  "city": "Surat",
-  "state": "Gujarat",
-  "country": "India",
-  "pincode": "395001",
-  "name": "Amit Patel",
-  "email": "amit@example.com",
-  "password": "Password@123"
-}
-```
-
-### Required Fields
-
-```text
-customerName
-customerEmail
-mobile
-name
-email
-password
-```
-
-### Optional Fields
-
-```text
-requestedAccountType
-address
-city
-state
-country
-pincode
-```
-
-### Password Policy
-
-- Minimum 8 characters
-- At least 1 uppercase letter
-- At least 1 lowercase letter
-- At least 1 number
-- At least 1 special character
-
-Example:
-
-```text
-Password@123
-```
+* Registration API
+* Login API
+* Request and response formats
+* Validation rules
+* Registration flow
+* Login flow
+* Database flow
+* JWT behavior
+* Authentication error handling
+* Testing scenarios
+* Future authentication scope
 
 ---
 
-## 9. Registration Flow
+## 9. API Testing
 
-```text
-POST /api/auth/register
-        ↓
-Zod Validation
-        ↓
-Auth Service
-        ↓
-BEGIN TRANSACTION
-        ↓
-Default Account Type
-        ↓
-Customer
-        ↓
-Customer Super Admin Role
-        ↓
-Role Permissions
-        ↓
-Customer Owner User
-        ↓
-User Role
-        ↓
-Password Hash
-        ↓
-Login Account
-        ↓
-Optional Upgrade Request
-        ↓
-COMMIT
+APIs can be tested using:
+
+* Swagger UI
+* Postman
+
+### Register
+
+```http
+POST http://localhost:3000/api/auth/register
 ```
 
-If any operation fails:
+### Login
 
-```text
-Error
- ↓
-ROLLBACK
+```http
+POST http://localhost:3000/api/auth/login
 ```
 
-This prevents partial registration.
+Authentication request/response examples and test scenarios are documented in:
+
+[Authentication Documentation](docs/AUTHENTICATION.md)
 
 ---
 
-## 10. Account Type Behavior
-
-### Without Account Type Request
-
-```text
-Actual Account Type = End User
-Upgrade Request = None
-```
-
-### With Account Type Request
-
-Example:
-
-```json
-{
-  "requestedAccountType": "Business"
-}
-```
-
-Result:
-
-```text
-Actual Account Type     = End User
-Requested Account Type  = Business
-Upgrade Request Status  = Pending
-```
-
-The requested account type does not become active automatically.
-
----
-
-## 11. Registration Response
-
-### Success
-
-HTTP `201 Created`
-
-```json
-{
-  "message": "Customer registered successfully."
-}
-```
-
-### Validation Error
-
-HTTP `400 Bad Request`
-
-```json
-{
-  "message": "Validation failed",
-  "errors": [
-    {
-      "field": "password",
-      "message": "Password must contain at least one uppercase letter"
-    }
-  ]
-}
-```
-
-### Invalid Account Type
-
-HTTP `400 Bad Request`
-
-```json
-{
-  "message": "Invalid requested account type."
-}
-```
-
-### Duplicate Registration
-
-HTTP `409 Conflict`
-
-```json
-{
-  "message": "Registration cannot be completed with the provided details."
-}
-```
-
-The API does not reveal whether a specific email already belongs to an account.
-
-### Unexpected Error
-
-HTTP `500 Internal Server Error`
-
-```json
-{
-  "message": "An unexpected error occurred."
-}
-```
-
-Detailed errors are logged server-side and are not returned to the client.
-
----
-
-# Testing
-
-## 12. Registration Tests
-
-Use unique email addresses for successful registration tests.
-
-### Test 1 — Successful Registration
-
-Request:
-
-```json
-{
-  "customerName": "Final Test Customer",
-  "customerEmail": "final.customer@example.com",
-  "mobile": "9876543215",
-  "name": "Final Test User",
-  "email": "final.user@example.com",
-  "password": "Password@123"
-}
-```
-
-Expected:
-
-```text
-HTTP 201 Created
-```
-
-```json
-{
-  "message": "Customer registered successfully."
-}
-```
-
-Database:
-
-```text
-customers                    → 1 new row
-users                        → 1 new row
-roles                        → 1 customer Super Admin role
-role_permissions             → active permissions assigned
-user_roles                   → 1 role assignment
-customer_login_accounts      → 1 new row
-account_type_upgrade_requests → no new row
-```
-
-### Test 2 — Business Account Request
-
-Request:
-
-```json
-{
-  "customerName": "Business Test Customer",
-  "requestedAccountType": "Business",
-  "customerEmail": "business.customer@example.com",
-  "mobile": "9876543216",
-  "name": "Business Test User",
-  "email": "business.user@example.com",
-  "password": "Password@123"
-}
-```
-
-Expected:
-
-```text
-HTTP 201 Created
-
-Actual Account Type    = End User
-Requested Account Type = Business
-Upgrade Status         = Pending
-```
-
-### Test 3 — Invalid Password
-
-Request:
-
-```json
-{
-  "customerName": "Validation Test",
-  "customerEmail": "validation@example.com",
-  "mobile": "9876543217",
-  "name": "Validation User",
-  "email": "validation.user@example.com",
-  "password": "password"
-}
-```
-
-Expected:
-
-```text
-HTTP 400 Bad Request
-```
-
-### Test 4 — Duplicate Email
-
-Use an email already registered.
-
-Expected:
-
-```text
-HTTP 409 Conflict
-```
-
-```json
-{
-  "message": "Registration cannot be completed with the provided details."
-}
-```
-
-### Test 5 — Invalid Account Type
-
-Request:
-
-```json
-{
-  "customerName": "Invalid Type Test",
-  "requestedAccountType": "SomethingRandom",
-  "customerEmail": "invalid.type@example.com",
-  "mobile": "9876543218",
-  "name": "Invalid Type User",
-  "email": "invalid.type.user@example.com",
-  "password": "Password@123"
-}
-```
-
-Expected:
-
-```text
-HTTP 400 Bad Request
-```
-
-```json
-{
-  "message": "Invalid requested account type."
-}
-```
-
----
-
-## 13. Database Verification
+## 10. Database Verification
 
 Connect to MySQL:
 
@@ -672,7 +375,13 @@ Connect to MySQL:
 USE GlobalIoTPlatformDB;
 ```
 
-Latest customer:
+### Check Tables
+
+```sql
+SHOW TABLES;
+```
+
+### Latest Customer
 
 ```sql
 SELECT *
@@ -681,7 +390,7 @@ ORDER BY id DESC
 LIMIT 1;
 ```
 
-Latest user:
+### Latest User
 
 ```sql
 SELECT *
@@ -690,7 +399,7 @@ ORDER BY id DESC
 LIMIT 1;
 ```
 
-Latest role:
+### Latest Role
 
 ```sql
 SELECT *
@@ -699,7 +408,7 @@ ORDER BY id DESC
 LIMIT 1;
 ```
 
-Latest role assignment:
+### Latest Role Assignment
 
 ```sql
 SELECT *
@@ -708,7 +417,7 @@ ORDER BY assigned_at DESC
 LIMIT 1;
 ```
 
-Latest login account:
+### Latest Login Account
 
 ```sql
 SELECT *
@@ -717,7 +426,7 @@ ORDER BY id DESC
 LIMIT 1;
 ```
 
-Latest upgrade request:
+### Latest Upgrade Request
 
 ```sql
 SELECT *
@@ -726,7 +435,7 @@ ORDER BY id DESC
 LIMIT 1;
 ```
 
-Role permissions:
+### Role Permissions
 
 ```sql
 SELECT
@@ -748,9 +457,7 @@ ORDER BY p.id;
 
 ---
 
-# Project Structure
-
-## 14. Directory Structure
+## 11. Project Structure
 
 ```text
 GlobalIoTPlatform.Backend/
@@ -772,6 +479,7 @@ GlobalIoTPlatform.Backend/
 ├── src/
 │   ├── config/
 │   │   ├── database.js
+│   │   ├── jwt.js
 │   │   └── swagger.js
 │   │
 │   ├── controllers/
@@ -780,7 +488,8 @@ GlobalIoTPlatform.Backend/
 │   │
 │   ├── dto/
 │   │   └── auth/
-│   │       └── register.dto.js
+│   │       ├── register.dto.js
+│   │       └── login.dto.js
 │   │
 │   ├── repositories/
 │   │   ├── auth/
@@ -792,9 +501,15 @@ GlobalIoTPlatform.Backend/
 │   │   ├── auth.routes.js
 │   │   └── health.routes.js
 │   │
-│   └── services/
-│       ├── auth.service.js
-│       └── health.service.js
+│   ├── services/
+│   │   ├── auth.service.js
+│   │   └── health.service.js
+│   │
+│   └── utils/
+│       └── jwt.util.js
+│
+├── docs/
+│   └── AUTHENTICATION.md
 │
 ├── .env.example
 ├── .gitignore
@@ -806,11 +521,9 @@ GlobalIoTPlatform.Backend/
 
 ---
 
-## 15. Git and Environment Rules
+## 12. Git and Environment Rules
 
-### Commit
-
-Safe to commit:
+### Safe to Commit
 
 ```text
 Source code
@@ -819,6 +532,7 @@ SQL seed files
 Migration scripts
 .env.example
 README.md
+docs/
 package.json
 package-lock.json
 ```
@@ -828,6 +542,7 @@ package-lock.json
 ```text
 .env
 node_modules/
+
 Passwords
 API secrets
 Private keys
@@ -840,11 +555,13 @@ Local data exports
 node_modules/
 .env
 npm-debug.log*
+.postman/
+postman/
 ```
 
 ---
 
-## 16. Complete Developer Setup
+## 13. Complete Developer Setup
 
 ```text
 git clone
@@ -870,21 +587,55 @@ No manual creation of the application tables is required for a fresh local setup
 
 ---
 
-## 17. Future Scope
+## 14. Authentication Development Status
 
-Planned modules include:
+Current:
 
-- Login API
-- JWT authentication
-- Email verification
-- Password reset/change
-- Session/token management
-- Account-type approval workflow
-- Customer role management
-- Company management
-- Product management
-- Device management
-- Device access and assignment
-- Telemetry
-- Device commands
-- Audit and common services
+```text
+Customer Registration       ✅
+Customer Login              ✅
+Password Hashing            ✅
+JWT Generation              ✅
+Customer-specific Roles     ✅
+Permission Assignment       ✅
+Last Login Tracking         ✅
+```
+
+Planned:
+
+```text
+Email Verification
+Protected /me API
+JWT Authentication Middleware
+Authorization Middleware
+Password Reset / Change
+Logout / Session Management
+```
+
+See:
+
+[Authentication Documentation](docs/AUTHENTICATION.md)
+
+for the detailed authentication design and current API behavior.
+
+---
+
+## 15. Future Scope
+
+Planned platform modules include:
+
+* Email verification
+* Protected profile API
+* JWT authentication middleware
+* Authorization / permission middleware
+* Password reset and change
+* Logout / session management
+* Account-type approval workflow
+* Customer role management
+* Company management
+* Product management
+* Device management
+* Device access and assignment
+* Telemetry
+* Device commands
+* Audit and common services
