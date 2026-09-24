@@ -2,6 +2,8 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 
 const db = require('../config/database');
+const { jwtExpiresIn } = require('../config/jwt');
+const jwtUtil = require('../utils/jwt.util');
 
 const customerRepository = require('../repositories/customer/customer.repository');
 const userRepository = require('../repositories/user/user.repository');
@@ -144,6 +146,58 @@ const register = async (data) => {
     }
 };
 
+const login = async (data) => {
+    const connection = await db.getConnection();
+
+    try {
+        const account = await loginAccountRepository.getLoginAccountByEmail(
+            connection,
+            data.email
+        );
+
+        if (!account) {
+            throw new Error('INVALID_CREDENTIALS');
+        }
+
+        if (
+            account.login_account_status !== 1 ||
+            account.customer_status !== 1 ||
+            account.user_status !== 1
+        ) {
+            throw new Error('INVALID_CREDENTIALS');
+        }
+
+        const passwordValid = await bcrypt.compare(
+            data.password,
+            account.password_hash
+        );
+
+        if (!passwordValid) {
+            throw new Error('INVALID_CREDENTIALS');
+        }
+
+        await loginAccountRepository.updateLastLogin(
+            connection,
+            account.id
+        );
+
+        const accessToken = jwtUtil.generateToken({
+            userPublicId: account.user_public_id,
+            customerPublicId: account.customer_public_id
+        });
+
+        return {
+            accessToken,
+            tokenType: 'Bearer',
+            expiresIn: jwtExpiresIn
+        };
+
+    } finally {
+        connection.release();
+    }
+};
+
 module.exports = {
-    register
+    register,
+    login
 };

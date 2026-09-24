@@ -81,6 +81,66 @@ const options = {
                             example: 'Password@123'
                         }
                     }
+                },
+
+                RegisterResponse: {
+                    type: 'object',
+                    required: [
+                        'message'
+                    ],
+                    properties: {
+                        message: {
+                            type: 'string',
+                            example: 'Customer registered successfully.'
+                        }
+                    }
+                },
+
+                LoginRequest: {
+                    type: 'object',
+                    required: [
+                        'email',
+                        'password'
+                    ],
+                    properties: {
+                        email: {
+                            type: 'string',
+                            format: 'email',
+                            example: 'final.user@example.com'
+                        },
+                        password: {
+                            type: 'string',
+                            format: 'password',
+                            example: 'Password@123'
+                        }
+                    }
+                },
+
+                LoginResponse: {
+                    type: 'object',
+                    required: [
+                        'message',
+                        'accessToken',
+                        'tokenType',
+                        'expiresIn'
+                    ],
+                    properties: {
+                        message: {
+                            type: 'string',
+                            example: 'Login successful.'
+                        },
+                        accessToken: {
+                            type: 'string'
+                        },
+                        tokenType: {
+                            type: 'string',
+                            example: 'Bearer'
+                        },
+                        expiresIn: {
+                            type: 'string',
+                            example: '1h'
+                        }
+                    }
                 }
             }
         }

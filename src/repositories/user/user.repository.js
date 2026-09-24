@@ -56,7 +56,35 @@ const assignRole = async (
     );
 };
 
+const getRolesByUserId = async (
+    connection,
+    customerId,
+    userId
+) => {
+    const [rows] = await connection.execute(
+        `
+        SELECT
+            r.id,
+            r.name
+        FROM user_roles ur
+        JOIN roles r
+            ON r.id = ur.role_id
+        WHERE ur.customer_id = ?
+          AND ur.user_id = ?
+          AND r.status = 1
+        ORDER BY r.id
+        `,
+        [
+            customerId,
+            userId
+        ]
+    );
+
+    return rows;
+};
+
 module.exports = {
     createUser,
-    assignRole
+    assignRole,
+    getRolesByUserId
 };

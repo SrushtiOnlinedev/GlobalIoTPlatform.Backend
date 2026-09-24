@@ -1,16 +1,17 @@
 const authService = require('../services/auth.service');
 const registerDto = require('../dto/auth/register.dto');
+const loginDto = require('../dto/auth/login.dto');
 
 const register = async (req, res) => {
     try {
         const data = registerDto.parse(req.body);
 
-        const result = await authService.register(data);
+        await authService.register(data);
 
-        res.status(201).json({
+        return res.status(201).json({
             message: 'Customer registered successfully.'
         });
-        
+
     } catch (error) {
 
         if (error.name === 'ZodError') {
@@ -29,9 +30,7 @@ const register = async (req, res) => {
             });
         }
 
-        if (
-            error.message === 'Requested account type not found.'
-        ) {
+        if (error.message === 'Requested account type not found.') {
             return res.status(400).json({
                 message: 'Invalid requested account type.'
             });
@@ -45,6 +44,46 @@ const register = async (req, res) => {
     }
 };
 
+const login = async (req, res) => {
+    try {
+        const data = loginDto.parse(req.body);
+
+        const result = await authService.login(data);
+
+        return res.status(200).json({
+            message: 'Login successful.',
+            accessToken: result.accessToken,
+            tokenType: result.tokenType,
+            expiresIn: result.expiresIn
+        });
+
+    } catch (error) {
+
+        if (error.name === 'ZodError') {
+            return res.status(400).json({
+                message: 'Validation failed',
+                errors: error.issues.map(issue => ({
+                    field: issue.path.join('.'),
+                    message: issue.message
+                }))
+            });
+        }
+
+        if (error.message === 'INVALID_CREDENTIALS') {
+            return res.status(401).json({
+                message: 'Invalid credentials.'
+            });
+        }
+
+        console.error(error);
+
+        return res.status(500).json({
+            message: 'An unexpected error occurred.'
+        });
+    }
+};
+
 module.exports = {
-    register
+    register,
+    login
 };
