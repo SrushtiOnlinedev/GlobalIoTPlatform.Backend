@@ -83,7 +83,36 @@ const login = async (req, res) => {
     }
 };
 
+const getCurrentUser = async (req, res) => {
+    try {
+        const { userPublicId, customerPublicId } = req.auth;
+
+        const user = await authService.getCurrentUser(
+            userPublicId,
+            customerPublicId
+        );
+
+        return res.status(200).json({
+            message: 'Current user retrieved successfully.',
+            user
+        });
+    } catch (error) {
+        if (error.code === 'USER_NOT_FOUND') {
+            return res.status(404).json({
+                message: 'User not found.'
+            });
+        }
+
+        console.error('Get current user error:', error);
+
+        return res.status(500).json({
+            message: 'An unexpected error occurred.'
+        });
+    }
+};
+
 module.exports = {
     register,
-    login
+    login,
+    getCurrentUser
 };

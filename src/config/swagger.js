@@ -17,6 +17,14 @@ const options = {
         ],
 
         components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT'
+                }
+            },
+
             schemas: {
                 RegisterRequest: {
                     type: 'object',
@@ -31,7 +39,7 @@ const options = {
                     properties: {
                         customerName: {
                             type: 'string',
-                            example: 'Amit Patel'
+                            example: 'Example Customer'
                         },
                         requestedAccountType: {
                             type: 'string',
@@ -40,40 +48,40 @@ const options = {
                         customerEmail: {
                             type: 'string',
                             format: 'email',
-                            example: 'amit.customer@example.com'
+                            example: 'customer@example.com'
                         },
                         mobile: {
                             type: 'string',
-                            example: '9876543210'
+                            example: '9990000000'
                         },
                         address: {
                             type: 'string',
-                            example: '123 Main Road'
+                            example: '123 Example Street'
                         },
                         city: {
                             type: 'string',
-                            example: 'Surat'
+                            example: 'Example City'
                         },
                         state: {
                             type: 'string',
-                            example: 'Gujarat'
+                            example: 'Example State'
                         },
                         country: {
                             type: 'string',
-                            example: 'India'
+                            example: 'Example Country'
                         },
                         pincode: {
                             type: 'string',
-                            example: '395001'
+                            example: '123456'
                         },
                         name: {
                             type: 'string',
-                            example: 'Amit Patel'
+                            example: 'Example User'
                         },
                         email: {
                             type: 'string',
                             format: 'email',
-                            example: 'amit@example.com'
+                            example: 'user@example.com'
                         },
                         password: {
                             type: 'string',
@@ -106,7 +114,7 @@ const options = {
                         email: {
                             type: 'string',
                             format: 'email',
-                            example: 'final.user@example.com'
+                            example: 'user@example.com'
                         },
                         password: {
                             type: 'string',
@@ -141,7 +149,175 @@ const options = {
                             example: '1h'
                         }
                     }
-                }
+                },
+
+                CurrentUserResponse: {
+                    type: 'object',
+                    required: [
+                        'message',
+                        'user'
+                    ],
+                    properties: {
+                        message: {
+                            type: 'string',
+                            example: 'Current user retrieved successfully.'
+                        },
+                        user: {
+                            type: 'object',
+                            required: [
+                                'userPublicId',
+                                'name',
+                                'email',
+                                'mobile',
+                                'userType',
+                                'accountType',
+                                'customer'
+                            ],
+                            properties: {
+                                userPublicId: {
+                                    type: 'string',
+                                    format: 'uuid'
+                                },
+                                name: {
+                                    type: 'string',
+                                    example: 'Example User'
+                                },
+                                email: {
+                                    type: 'string',
+                                    format: 'email',
+                                    example: 'user@example.com'
+                                },
+                                mobile: {
+                                    type: 'string',
+                                    example: '9990000000'
+                                },
+                                userType: {
+                                    type: 'string',
+                                    example: 'Customer Owner'
+                                },
+                                accountType: {
+                                    type: 'string',
+                                    example: 'End User'
+                                },
+                                customer: {
+                                    type: 'object',
+                                    required: [
+                                        'customerPublicId',
+                                        'name',
+                                        'email'
+                                    ],
+                                    properties: {
+                                        customerPublicId: {
+                                            type: 'string',
+                                            format: 'uuid'
+                                        },
+                                        name: {
+                                            type: 'string',
+                                            example: 'Example Customer'
+                                        },
+                                        email: {
+                                            type: 'string',
+                                            format: 'email',
+                                            example: 'customer@example.com'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+
+                ValidationErrorResponse: {
+                    type: 'object',
+                    required: [
+                        'message',
+                        'errors'
+                    ],
+                    properties: {
+                        message: {
+                            type: 'string',
+                            example: 'Validation failed'
+                        },
+                        errors: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                required: [
+                                    'field',
+                                    'message'
+                                ],
+                                properties: {
+                                    field: {
+                                        type: 'string',
+                                        example: 'password'
+                                    },
+                                    message: {
+                                        type: 'string',
+                                        example: 'Password must contain at least one uppercase letter'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+
+                MessageResponse: {
+                    type: 'object',
+                    required: [
+                        'message'
+                    ],
+                    properties: {
+                        message: {
+                            type: 'string',
+                            example: 'An unexpected error occurred.'
+                        }
+                    }
+                },
+
+                HealthResponse: {
+                    type: 'object',
+                    required: [
+                        'status',
+                        'message',
+                        'database'
+                    ],
+                    properties: {
+                        status: {
+                            type: 'string',
+                            example: 'OK'
+                        },
+                        message: {
+                            type: 'string',
+                            example: 'Global IoT Platform API is running'
+                        },
+                        database: {
+                            type: 'string',
+                            enum: [
+                                'Connected',
+                                'Not Connected'
+                            ],
+                            example: 'Connected'
+                        }
+                    }
+                },
+
+                HealthErrorResponse: {
+                    type: 'object',
+                    required: [
+                        'status',
+                        'message'
+                    ],
+                    properties: {
+                        status: {
+                            type: 'string',
+                            example: 'ERROR'
+                        },
+                        message: {
+                            type: 'string',
+                            example: 'Database connection failed'
+                        }
+                    }
+                },
             }
         }
     },

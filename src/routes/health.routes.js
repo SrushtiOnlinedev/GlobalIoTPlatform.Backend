@@ -12,7 +12,20 @@ const router = express.Router();
  *       - Health
  *     responses:
  *       200:
- *         description: API is running
+ *         description: API and database health status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthResponse'
+ *       500:
+ *         description: Database connection failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/HealthErrorResponse'
+ *             example:
+ *               status: ERROR
+ *               message: Database connection failed
  */
 
 router.get('/', healthController.getHealth);

@@ -197,7 +197,30 @@ const login = async (data) => {
     }
 };
 
+const getCurrentUser = async (userPublicId, customerPublicId) => {
+    const connection = await db.getConnection();
+
+    try {
+        const user = await userRepository.getCurrentUser(
+            connection,
+            userPublicId,
+            customerPublicId
+        );
+
+        if (!user) {
+            const error = new Error('Current user not found.');
+            error.code = 'USER_NOT_FOUND';
+            throw error;
+        }
+
+        return user;
+    } finally {
+        connection.release();
+    }
+};
+
 module.exports = {
     register,
-    login
+    login,
+    getCurrentUser
 };
