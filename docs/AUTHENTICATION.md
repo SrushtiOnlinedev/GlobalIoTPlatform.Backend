@@ -25,13 +25,13 @@ This document describes the current authentication design and API flow for the G
 - Login using email and password
 - Password hashing with bcrypt
 - JWT access-token generation
+- JWT authentication middleware
+- Current authenticated user API (`GET /api/auth/me`)
 - Last-login tracking
 - Swagger / OpenAPI documentation
 
 ### Planned Scope
 
-- Protected profile (`/api/auth/me`) API
-- JWT authentication middleware
 - Authorization / permission middleware
 - Email verification
 - Password reset and change
@@ -59,7 +59,7 @@ User Type             → User/person type
 Role                  → User access definition
 Permission            → Individual allowed action
 Login Account         → Authentication credentials
-````
+```
 
 ### Initial Customer User
 
@@ -565,6 +565,113 @@ Protected APIs will use:
 Authorization: Bearer <accessToken>
 ```
 
+### JWT Authentication Middleware
+
+Protected APIs use JWT authentication middleware.
+
+The middleware:
+
+```text
+Request
+   ↓
+Read Authorization header
+   ↓
+Extract Bearer token
+   ↓
+Verify JWT
+   ↓
+Set authenticated user context
+   ↓
+Continue to protected API
+```
+
+The current JWT payload contains:
+```json
+{
+  "userPublicId": "...",
+  "customerPublicId": "..."
+}
+```
+
+The authenticated context is available to protected APIs through the request.
+
+##Current User API
+
+###Endpoint
+```http
+GET /api/auth/me
+```
+
+Authentication
+  Required.
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Purpose
+
+  Returns the currently authenticated user's basic identity and customer context.
+
+Request Body
+
+  No request body is required.
+
+Successful Response
+
+HTTP 200 OK
+
+```json
+{
+  "message": "Current user retrieved successfully.",
+  "user": {
+    "userPublicId": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Example User",
+    "email": "user@example.com",
+    "mobile": "9990000000",
+    "userType": "Customer Owner",
+    "accountType": "End User",
+    "customer": {
+      "customerPublicId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "name": "Example Customer",
+      "email": "customer@example.com"
+    }
+  }
+}
+```
+
+Error Responses
+
+401 Unauthorized — Authentication required
+```json
+{
+  "message": "Authentication required."
+}
+```
+
+401 Unauthorized — Invalid or expired token
+```json
+{
+  "message": "Invalid or expired token."
+}
+```
+
+404 Not Found
+```json
+{
+  "message": "User not found."
+}
+```
+
+500 Internal Server Error
+```json
+{
+  "message": "An unexpected error occurred."
+}
+```
+
+The API uses the customer and user public identifiers from the JWT to retrieve the authenticated user's context.
+
 ### Authentication vs Authorization
 
 ```text
@@ -577,7 +684,9 @@ Authorization
 
 The JWT identifies the authenticated user and customer.
 
-Roles and permissions are used for authorization and will be handled through protected APIs and authorization middleware.
+Authentication is handled by JWT middleware.
+
+Authorization is separate from authentication and will use customer-specific roles and platform-defined permissions through authorization middleware.
 
 ---
 
@@ -723,7 +832,7 @@ POST http://localhost:3000/api/auth/login
 
 ```json
 {
-  "email": "final.user@example.com",
+  "email": "user@example.com",
   "password": "Password@123"
 }
 ```
@@ -744,6 +853,7 @@ Expected:
 ```
 
 Verify last login:
+-Replace `<registered-user-email>` with the email of the account used for testing.
 
 ```sql
 SELECT
@@ -751,7 +861,7 @@ SELECT
     email,
     last_login_at
 FROM customer_login_accounts
-WHERE email = 'final.user@example.com';
+WHERE email = '<registered-user-email>';
 ```
 
 `last_login_at` should contain the latest successful login time.
@@ -760,7 +870,7 @@ WHERE email = 'final.user@example.com';
 
 ```json
 {
-  "email": "final.user@example.com",
+  "email": "user@example.com",
   "password": "WrongPassword@123"
 }
 ```
@@ -876,6 +986,58 @@ WHERE r.id = (
 ORDER BY p.id;
 ```
 
+### Current User
+
+```http
+GET http://localhost:3000/api/auth/me
+```
+
+Use the access token returned by Login:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Expected:
+
+```text
+200 OK
+```
+
+The response contains the authenticated user's identity, user type, account type, and customer information.
+
+#### Test: Missing Token
+
+Send the request without the Authorization header.
+
+Expected:
+
+```text
+401 Unauthorized
+```
+
+```json
+{
+  "message": "Authentication required."
+}
+```
+
+#### Test: Invalid or Expired Token
+
+Send an invalid or expired Bearer token.
+
+Expected:
+
+```text
+401 Unauthorized
+```
+
+```json
+{
+  "message": "Invalid or expired token."
+}
+```
+
 ---
 
 ## 8. Future Authentication Scope
@@ -884,6 +1046,8 @@ The next authentication steps are:
 
 ```text
 Login
+  ↓
+JWT Access Token
   ↓
 JWT Authentication Middleware
   ↓
@@ -899,13 +1063,7 @@ Permission-based Protected APIs
 ### Planned Features
 
 ```text
-GET /api/auth/me
-→ Retrieve authenticated user/account information
-
-JWT Middleware
-→ Validate Bearer access tokens
-
-Authorization Middleware
+Authorization / Permission Middleware
 → Check customer-specific roles and permissions
 
 Email Verification

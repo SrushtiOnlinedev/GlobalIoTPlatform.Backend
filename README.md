@@ -37,11 +37,13 @@ The current backend includes:
 - Customer registration
 - Customer login
 - JWT access-token generation
+- JWT authentication middleware
+- Current authenticated user API (`GET /api/auth/me`)
 - Last-login tracking
 - Customer-specific roles and permissions
 - Health-check API
 
-Authentication features such as email verification, protected profile APIs, authorization middleware, password management, and session management will be added in later stages.
+Remaining authentication features such as authorization middleware, email verification, password management, and session management will be added in later stages.
 
 ### Technology Stack
 
@@ -79,7 +81,7 @@ Verify:
 ```bash
 node --version
 npm --version
-````
+```
 
 MySQL must be running and the configured MySQL user must have permission to create the project database and tables.
 
@@ -320,6 +322,15 @@ The current authentication APIs are:
 ```http
 POST /api/auth/register
 POST /api/auth/login
+GET /api/auth/me
+```
+
+The `/me` API requires a valid JWT Bearer token.
+
+### Health API
+
+```http
+GET /api/health
 ```
 
 Detailed authentication documentation is available here:
@@ -360,6 +371,20 @@ POST http://localhost:3000/api/auth/register
 ```http
 POST http://localhost:3000/api/auth/login
 ```
+
+### Current User
+
+```http
+GET http://localhost:3000/api/auth/me
+```
+
+Use the JWT returned by Login:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Swagger or Postman can be used to test the protected endpoint.
 
 Authentication request/response examples and test scenarios are documented in:
 
@@ -596,18 +621,19 @@ Customer Registration       ✅
 Customer Login              ✅
 Password Hashing            ✅
 JWT Generation              ✅
+JWT Authentication          ✅
+Current User API (/me)      ✅
 Customer-specific Roles     ✅
 Permission Assignment       ✅
 Last Login Tracking         ✅
+Swagger Documentation       ✅
 ```
 
 Planned:
 
 ```text
-Email Verification
-Protected /me API
-JWT Authentication Middleware
 Authorization Middleware
+Email Verification
 Password Reset / Change
 Logout / Session Management
 ```
@@ -624,10 +650,8 @@ for the detailed authentication design and current API behavior.
 
 Planned platform modules include:
 
-* Email verification
-* Protected profile API
-* JWT authentication middleware
 * Authorization / permission middleware
+* Email verification
 * Password reset and change
 * Logout / session management
 * Account-type approval workflow
