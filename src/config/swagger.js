@@ -318,6 +318,40 @@ const options = {
                         }
                     }
                 },
+
+                CreateProductRequest: {
+                    type: 'object',
+                    required: [
+                        'name'
+                    ],
+                    properties: {
+                        name: {
+                            type: 'string',
+                            example: 'Example Product'
+                        },
+                        modelNumber: {
+                            type: 'string',
+                            example: 'Example Model'
+                        },
+                        description: {
+                            type: 'string',
+                            example: 'Example product description'
+                        }
+                    }
+                },
+
+                CreateProductResponse: {
+                    type: 'object',
+                    required: [
+                        'message'
+                    ],
+                    properties: {
+                        message: {
+                            type: 'string',
+                            example: 'Product created successfully.'
+                        }
+                    }
+                },
             }
         }
     },

@@ -33,6 +33,22 @@ const createCustomer = async (connection, customer) => {
     return result.insertId;
 };
 
+const getCustomerByPublicId = async (connection, publicId) => {
+    const [rows] = await connection.execute(
+        `
+        SELECT id, public_id
+        FROM customers
+        WHERE public_id = ?
+          AND status = 1
+        LIMIT 1
+        `,
+        [publicId]
+    );
+
+    return rows[0] || null;
+};
+
 module.exports = {
-    createCustomer
+    createCustomer,
+    getCustomerByPublicId
 };

@@ -139,9 +139,26 @@ const getCurrentUser = async (connection, userPublicId, customerPublicId) => {
     };
 };
 
+const getUserByPublicId = async (connection, publicId, customerId) => {
+    const [rows] = await connection.execute(
+        `
+        SELECT id, public_id
+        FROM users
+        WHERE public_id = ?
+          AND customer_id = ?
+          AND status = 1
+        LIMIT 1
+        `,
+        [publicId, customerId]
+    );
+
+    return rows[0] || null;
+};
+
 module.exports = {
     createUser,
     assignRole,
     getRolesByUserId,
-    getCurrentUser
+    getCurrentUser,
+    getUserByPublicId
 };
