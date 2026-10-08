@@ -39,20 +39,13 @@ const router = express.Router();
  *                 - field: name
  *                   message: 'Too small: expected string to have >=2 characters'
  *       404:
- *         description: Customer or user not found
+ *         description: User not found
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/MessageResponse'
- *             examples:
- *               customerNotFound:
- *                 summary: Customer not found
- *                 value:
- *                   message: Customer not found.
- *               userNotFound:
- *                 summary: User not found
- *                 value:
- *                   message: User not found.
+ *             example:
+ *               message: User not found.
  *       500:
  *         description: Unexpected server error
  *         content:

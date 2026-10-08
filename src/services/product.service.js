@@ -1,49 +1,46 @@
 const crypto = require('crypto');
 
-const db = require('../config/database');
+const {
+    getCustomerDatabaseConnection
+} = require('./customer-db-connection.service');
 
-const customerRepository = require('../repositories/customer/customer.repository');
-const userRepository = require('../repositories/user/user.repository');
-const productRepository = require('../repositories/product/product.repository');
+const userRepository = require(
+    '../repositories/customer-db/user.repository'
+);
+
+const productRepository = require(
+    '../repositories/product/product.repository'
+);
 
 const createProduct = async (
     data,
     userPublicId,
     customerPublicId
 ) => {
-    const connection = await db.getConnection();
-
-    try {
-        const customer = await customerRepository.getCustomerByPublicId(
-            connection,
+    const customerDb =
+        await getCustomerDatabaseConnection(
             customerPublicId
         );
 
-        if (!customer) {
-            const error = new Error('Customer not found.');
-            error.code = 'CUSTOMER_NOT_FOUND';
-            throw error;
-        }
-
-        const user = await userRepository.getUserByPublicId(
-            connection,
-            userPublicId,
-            customer.id
+    const user =
+        await userRepository.getUserByPublicId(
+            customerDb,
+            userPublicId
         );
 
-        if (!user) {
-            const error = new Error('User not found.');
-            error.code = 'USER_NOT_FOUND';
-            throw error;
-        }
+    if (!user || user.status !== 1) {
+        const error = new Error('User not found.');
+        error.code = 'USER_NOT_FOUND';
+        throw error;
+    }
 
-        const productPublicId = crypto.randomUUID();
+    const productPublicId = crypto.randomUUID();
 
-        const productId = await productRepository.createProduct(
-            connection,
+    const productId =
+        await productRepository.createProduct(
+            customerDb,
             {
                 publicId: productPublicId,
-                customerId: customer.id,
                 name: data.name,
                 modelNumber: data.modelNumber ?? null,
                 description: data.description ?? null,
@@ -52,13 +49,10 @@ const createProduct = async (
             }
         );
 
-        return {
-            productId,
-            productPublicId
-        };
-    } finally {
-        connection.release();
-    }
+    return {
+        productId,
+        productPublicId
+    };
 };
 
 module.exports = {

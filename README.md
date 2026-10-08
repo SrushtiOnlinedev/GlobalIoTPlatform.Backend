@@ -41,6 +41,7 @@ The current backend includes:
 - Current authenticated user API (`GET /api/auth/me`)
 - Last-login tracking
 - Customer-specific roles and permissions
+- Product creation
 - Health-check API
 
 Remaining authentication features such as authorization middleware, email verification, password management, and session management will be added in later stages.
@@ -323,9 +324,12 @@ The current authentication APIs are:
 POST /api/auth/register
 POST /api/auth/login
 GET /api/auth/me
+POST /api/products
+GET /api/health
 ```
 
 The `/me` API requires a valid JWT Bearer token.
+Product creation requires JWT authentication.
 
 ### Health API
 
@@ -383,6 +387,20 @@ Use the JWT returned by Login:
 ```http
 Authorization: Bearer <accessToken>
 ```
+
+### Create Product
+
+```http
+POST http://localhost:3000/api/products
+```
+
+Authentication:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+The request body and response details are documented in Swagger.
 
 Swagger or Postman can be used to test the protected endpoint.
 
@@ -657,7 +675,6 @@ Planned platform modules include:
 * Account-type approval workflow
 * Customer role management
 * Company management
-* Product management
 * Device management
 * Device access and assignment
 * Telemetry

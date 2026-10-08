@@ -5,52 +5,99 @@ const db = require('../config/database');
 const { jwtExpiresIn } = require('../config/jwt');
 const jwtUtil = require('../utils/jwt.util');
 
-const customerRepository = require('../repositories/customer/customer.repository');
-const userRepository = require('../repositories/user/user.repository');
-const userTypeRepository = require('../repositories/user/user-type.repository');
-const loginAccountRepository = require('../repositories/auth/login-account.repository');
-const accountTypeRepository = require('../repositories/auth/account-type.repository');
-const upgradeRequestRepository = require('../repositories/auth/account-type-upgrade-request.repository');
-const roleRepository = require('../repositories/auth/role.repository');
-const rolePermissionRepository = require('../repositories/auth/role-permission.repository');
+const customerRepository = require(
+    '../repositories/customer/customer.repository'
+);
+
+const loginAccountRepository = require(
+    '../repositories/auth/login-account.repository'
+);
+
+const accountTypeRepository = require(
+    '../repositories/auth/account-type.repository'
+);
+
+const upgradeRequestRepository = require(
+    '../repositories/auth/account-type-upgrade-request.repository'
+);
+
+const customerDatabaseRepository = require(
+    '../repositories/customer-database/customer-database.repository'
+);
+
+const {
+    provisionCustomerDatabase
+} = require('./customer-db-provisioning.service');
+
+const {
+    getCustomerDatabasePool
+} = require('../config/customer-database');
+
+const customerDbUserRepository = require(
+    '../repositories/customer-db/user.repository'
+);
 
 const register = async (data) => {
+    const customerPublicId = crypto.randomUUID();
+    const userPublicId = crypto.randomUUID();
+    const loginAccountPublicId = crypto.randomUUID();
+
+    const passwordHash = await bcrypt.hash(data.password, 12);
+
     const connection = await db.getConnection();
 
+    let customerId = null;
+    let databaseId = null;
+    let defaultAccountType = null;
+    let requestedAccountType = null;
+
     try {
-        await connection.beginTransaction();
+        const existingLoginAccount =
+            await loginAccountRepository.getLoginAccountByEmail(
+                connection,
+                data.email
+            );
 
-        const customerPublicId = crypto.randomUUID();
-        const userPublicId = crypto.randomUUID();
-        const loginAccountPublicId = crypto.randomUUID();
+        if (existingLoginAccount) {
+            const error = new Error(
+                'Registration cannot be completed with the provided details.'
+            );
+            error.code = 'ER_DUP_ENTRY';
+            throw error;
+        }
 
-        const passwordHash = await bcrypt.hash(data.password, 12);
+        defaultAccountType =
+            await accountTypeRepository.getByName(
+                connection,
+                'End User'
+            );
 
-        const accountType = await accountTypeRepository.getByName(
-            connection,
-            'End User'
-        );
-
-        if (!accountType) {
+        if (!defaultAccountType) {
             throw new Error('Default account type not found.');
         }
 
-        const userType = await userTypeRepository.getByName(
-            connection,
-            'Customer Owner'
-        );
+        if (data.requestedAccountType) {
+            requestedAccountType =
+                await accountTypeRepository.getByName(
+                    connection,
+                    data.requestedAccountType
+                );
 
-        if (!userType) {
-            throw new Error('Customer Owner user type not found.');
+            if (!requestedAccountType) {
+                throw new Error(
+                    'Requested account type not found.'
+                );
+            }
         }
 
-        const customerId = await customerRepository.createCustomer(
+        customerId = await customerRepository.createCustomer(
             connection,
             {
                 publicId: customerPublicId,
                 name: data.customerName,
                 email: data.customerEmail,
                 mobile: data.mobile,
+                accountTypeId: defaultAccountType.id,
                 address: data.address ?? null,
                 city: data.city ?? null,
                 state: data.state ?? null,
@@ -58,91 +105,92 @@ const register = async (data) => {
                 pincode: data.pincode ?? null
             }
         );
+    } finally {
+        connection.release();
+    }
 
-        const roleId = await roleRepository.createRole(
-            connection,
-            {
+    try {
+        const customerDatabase =
+            await provisionCustomerDatabase({
                 customerId,
-                name: 'Customer Super Admin',
-                description: 'Initial administrative role for the customer.'
-            }
-        );
+                owner: {
+                    publicId: userPublicId,
+                    name: data.name,
+                    email: data.email,
+                    mobile: data.mobile
+                }
+            });
 
-        await rolePermissionRepository.assignAllActivePermissions(
-            connection,
-            roleId
-        );
+        databaseId = customerDatabase.databaseId;
 
-        const userId = await userRepository.createUser(
-            connection,
-            {
-                publicId: userPublicId,
-                customerId,
-                parentUserId: null,
-                name: data.name,
-                email: data.email,
-                mobile: data.mobile,
-                userType: userType.id,
-                status: 1
-            }
-        );
+        const platformConnection =
+            await db.getConnection();
 
-        await userRepository.assignRole(
-            connection,
-            customerId,
-            userId,
-            roleId,
-            null
-        );
+        try {
+            await platformConnection.beginTransaction();
 
-        await loginAccountRepository.createLoginAccount(
-            connection,
-            {
-                publicId: loginAccountPublicId,
-                customerId,
-                userId,
-                email: data.email,
-                passwordHash,
-                actualAccountTypeId: accountType.id,
-                status: 1
-            }
-        );
-
-        if (data.requestedAccountType) {
-            const requestedAccountType = await accountTypeRepository.getByName(
-                connection,
-                data.requestedAccountType
+            await loginAccountRepository.createLoginAccount(
+                platformConnection,
+                {
+                    publicId: loginAccountPublicId,
+                    customerId,
+                    userPublicId,
+                    email: data.email,
+                    passwordHash,
+                    status: 1
+                }
             );
 
-            if (!requestedAccountType) {
-                throw new Error('Requested account type not found.');
-            }
-
-            if (requestedAccountType.id !== accountType.id) {
+            if (
+                requestedAccountType &&
+                requestedAccountType.id !== defaultAccountType.id
+            ) {
                 await upgradeRequestRepository.createUpgradeRequest(
-                    connection,
+                    platformConnection,
                     {
                         customerId,
-                        currentAccountTypeId: accountType.id,
-                        requestedAccountTypeId: requestedAccountType.id
+                        currentAccountTypeId: defaultAccountType.id,
+                        requestedAccountTypeId:
+                            requestedAccountType.id
                     }
                 );
             }
-        }
 
-        await connection.commit();
+            await customerDatabaseRepository.markProvisioningActive(
+                platformConnection,
+                databaseId
+            );
+
+            await platformConnection.commit();
+        } catch (error) {
+            await platformConnection.rollback();
+            throw error;
+        } finally {
+            platformConnection.release();
+        }
 
         return {
             customerId,
             customerPublicId,
-            userId,
             userPublicId
         };
     } catch (error) {
-        await connection.rollback();
+        if (databaseId) {
+            const platformConnection =
+                await db.getConnection();
+
+            try {
+                await customerDatabaseRepository.markProvisioningFailed(
+                    platformConnection,
+                    databaseId,
+                    error.message
+                );
+            } finally {
+                platformConnection.release();
+            }
+        }
+
         throw error;
-    } finally {
-        connection.release();
     }
 };
 
@@ -150,10 +198,11 @@ const login = async (data) => {
     const connection = await db.getConnection();
 
     try {
-        const account = await loginAccountRepository.getLoginAccountByEmail(
-            connection,
-            data.email
-        );
+        const account =
+            await loginAccountRepository.getLoginAccountByEmail(
+                connection,
+                data.email
+            );
 
         if (!account) {
             throw new Error('INVALID_CREDENTIALS');
@@ -162,7 +211,8 @@ const login = async (data) => {
         if (
             account.login_account_status !== 1 ||
             account.customer_status !== 1 ||
-            account.user_status !== 1
+            account.database_status !== 1 ||
+            account.provisioning_status !== 'ACTIVE'
         ) {
             throw new Error('INVALID_CREDENTIALS');
         }
@@ -173,6 +223,23 @@ const login = async (data) => {
         );
 
         if (!passwordValid) {
+            throw new Error('INVALID_CREDENTIALS');
+        }
+
+        const customerDbPool =
+            getCustomerDatabasePool({
+                databaseName: account.database_name,
+                host: account.database_host,
+                port: account.database_port
+            });
+
+        const user =
+            await customerDbUserRepository.getUserByPublicId(
+                customerDbPool,
+                account.user_public_id
+            );
+
+        if (!user || user.status !== 1) {
             throw new Error('INVALID_CREDENTIALS');
         }
 
@@ -191,31 +258,92 @@ const login = async (data) => {
             tokenType: 'Bearer',
             expiresIn: jwtExpiresIn
         };
-
     } finally {
         connection.release();
     }
 };
 
-const getCurrentUser = async (userPublicId, customerPublicId) => {
-    const connection = await db.getConnection();
+const getCurrentUser = async (
+    userPublicId,
+    customerPublicId
+) => {
+    const platformConnection = await db.getConnection();
 
     try {
-        const user = await userRepository.getCurrentUser(
-            connection,
-            userPublicId,
-            customerPublicId
-        );
+        const customer =
+            await customerRepository.getCustomerContextByPublicId(
+                platformConnection,
+                customerPublicId
+            );
 
-        if (!user) {
+        if (!customer) {
             const error = new Error('Current user not found.');
             error.code = 'USER_NOT_FOUND';
             throw error;
         }
 
-        return user;
+        const [databaseRows] = await platformConnection.execute(
+            `
+            SELECT
+                database_name,
+                database_host,
+                database_port,
+                status,
+                provisioning_status
+            FROM customer_databases
+            WHERE customer_id = ?
+            LIMIT 1
+            `,
+            [customer.id]
+        );
+
+        const database = databaseRows[0];
+
+        if (
+            !database ||
+            database.status !== 1 ||
+            database.provisioning_status !== 'ACTIVE'
+        ) {
+            const error = new Error('Current user not found.');
+            error.code = 'USER_NOT_FOUND';
+            throw error;
+        }
+
+        const customerDbPool =
+            getCustomerDatabasePool({
+                databaseName: database.database_name,
+                host: database.database_host,
+                port: database.database_port
+            });
+
+        const user =
+            await customerDbUserRepository.getUserByPublicId(
+                customerDbPool,
+                userPublicId
+            );
+
+        if (!user || user.status !== 1) {
+            const error = new Error('Current user not found.');
+            error.code = 'USER_NOT_FOUND';
+            throw error;
+        }
+
+        return {
+            userPublicId: user.public_id,
+            name: user.name,
+            email: user.email,
+            mobile: user.mobile,
+            userType: user.user_type_code,
+            accountType: customer.account_type,
+            customer: {
+                customerPublicId:
+                    customer.customer_public_id,
+                name: customer.customer_name,
+                email: customer.customer_email
+            }
+        };
     } finally {
-        connection.release();
+        platformConnection.release();
     }
 };
 

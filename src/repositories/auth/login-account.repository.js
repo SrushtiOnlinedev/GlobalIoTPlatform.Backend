@@ -5,21 +5,19 @@ const createLoginAccount = async (connection, account) => {
         (
             public_id,
             customer_id,
-            user_id,
+            user_public_id,
             email,
             password_hash,
-            actual_account_type_id,
             status
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         `,
         [
             account.publicId,
             account.customerId,
-            account.userId,
+            account.userPublicId,
             account.email,
             account.passwordHash,
-            account.actualAccountTypeId,
             account.status
         ]
     );
@@ -34,39 +32,30 @@ const getLoginAccountByEmail = async (connection, email) => {
             cla.id,
             cla.public_id,
             cla.customer_id,
-            cla.user_id,
+            cla.user_public_id,
             cla.email,
             cla.password_hash,
-            cla.actual_account_type_id,
             cla.status AS login_account_status,
-
-            at.name AS account_type,
 
             c.public_id AS customer_public_id,
             c.status AS customer_status,
 
-            u.public_id AS user_public_id,
-            u.name AS user_name,
-            ut.name AS user_type,
-            u.status AS user_status
+            cd.database_name,
+            cd.database_host,
+            cd.database_port,
+            cd.status AS database_status,
+            cd.provisioning_status
 
         FROM customer_login_accounts cla
 
-        JOIN account_types at
-            ON at.id = cla.actual_account_type_id
-            AND at.status = 1
-
-        JOIN customers c
+        INNER JOIN customers c
             ON c.id = cla.customer_id
 
-        JOIN users u
-            ON u.id = cla.user_id
-
-        JOIN user_types ut
-            ON ut.id = u.user_type
-            AND ut.status = 1
+        INNER JOIN customer_databases cd
+            ON cd.customer_id = c.id
 
         WHERE cla.email = ?
+
         LIMIT 1
         `,
         [email]

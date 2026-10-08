@@ -4,18 +4,16 @@ const createProduct = async (connection, product) => {
         INSERT INTO products
         (
             public_id,
-            customer_id,
             name,
             model_number,
             description,
             status,
             created_by_user_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         `,
         [
             product.publicId,
-            product.customerId,
             product.name,
             product.modelNumber,
             product.description,

@@ -14,7 +14,7 @@ const createUpgradeRequest = async (connection, request) => {
             request.customerId,
             request.currentAccountTypeId,
             request.requestedAccountTypeId,
-            1
+            'PENDING'
         ]
     );
 

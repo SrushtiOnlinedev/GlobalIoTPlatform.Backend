@@ -39,53 +39,70 @@ const options = {
                     properties: {
                         customerName: {
                             type: 'string',
+                            minLength: 2,
+                            maxLength: 200,
                             example: 'Example Customer'
                         },
                         requestedAccountType: {
                             type: 'string',
+                            minLength: 2,
+                            maxLength: 100,
                             example: 'Business'
                         },
                         customerEmail: {
                             type: 'string',
                             format: 'email',
+                            maxLength: 320,
                             example: 'customer@example.com'
                         },
                         mobile: {
                             type: 'string',
+                            minLength: 7,
+                            maxLength: 30,
                             example: '9990000000'
                         },
                         address: {
                             type: 'string',
+                            maxLength: 500,
                             example: '123 Example Street'
                         },
                         city: {
                             type: 'string',
+                            maxLength: 100,
                             example: 'Example City'
                         },
                         state: {
                             type: 'string',
+                            maxLength: 100,
                             example: 'Example State'
                         },
                         country: {
                             type: 'string',
+                            maxLength: 100,
                             example: 'Example Country'
                         },
                         pincode: {
                             type: 'string',
+                            maxLength: 20,
                             example: '123456'
                         },
                         name: {
                             type: 'string',
+                            minLength: 2,
+                            maxLength: 200,
                             example: 'Example User'
                         },
                         email: {
                             type: 'string',
                             format: 'email',
+                            maxLength: 320,
                             example: 'user@example.com'
                         },
                         password: {
                             type: 'string',
                             format: 'password',
+                            minLength: 8,
+                            maxLength: 100,
                             example: 'Password@123'
                         }
                     }
@@ -114,11 +131,14 @@ const options = {
                         email: {
                             type: 'string',
                             format: 'email',
+                            maxLength: 320,
                             example: 'user@example.com'
                         },
                         password: {
                             type: 'string',
                             format: 'password',
+                            minLength: 1,
+                            maxLength: 100,
                             example: 'Password@123'
                         }
                     }
@@ -193,7 +213,7 @@ const options = {
                                 },
                                 userType: {
                                     type: 'string',
-                                    example: 'Customer Owner'
+                                    example: 'CUSTOMER_OWNER'
                                 },
                                 accountType: {
                                     type: 'string',
@@ -327,14 +347,18 @@ const options = {
                     properties: {
                         name: {
                             type: 'string',
+                            minLength: 2,
+                            maxLength: 200,
                             example: 'Example Product'
                         },
                         modelNumber: {
                             type: 'string',
+                            maxLength: 100,
                             example: 'Example Model'
                         },
                         description: {
                             type: 'string',
+                            maxLength: 1000,
                             example: 'Example product description'
                         }
                     }

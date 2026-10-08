@@ -13,11 +13,24 @@ const dbConfig = {
     password: process.env.DB_PASSWORD || ''
 };
 
-const schemaPath = path.join(__dirname, '..', 'database', 'schema');
-const seedPath = path.join(__dirname, '..', 'database', 'seed');
+const platformSchemaPath = path.join(
+    __dirname,
+    '..',
+    'database',
+    'platform',
+    'schema'
+);
+
+const platformSeedPath = path.join(
+    __dirname,
+    '..',
+    'database',
+    'platform',
+    'seed'
+);
 
 const quoteIdentifier = (value) => {
-    if (!/^[a-zA-Z0-9_$]+$/.test(value)) {
+    if (!/^[a-zA-Z0-9_]+$/.test(value)) {
         throw new Error(`Invalid database name: ${value}`);
     }
 
@@ -109,7 +122,7 @@ const runFolder = async (connection, folder, type) => {
 };
 
 const migrate = async () => {
-    console.log(`Database: ${DB_NAME}`);
+    console.log(`Platform Database: ${DB_NAME}`);
 
     await ensureDatabase();
 
@@ -124,17 +137,17 @@ const migrate = async () => {
 
         await runFolder(
             connection,
-            schemaPath,
+            platformSchemaPath,
             'schema'
         );
 
         await runFolder(
             connection,
-            seedPath,
+            platformSeedPath,
             'seed'
         );
 
-        console.log('Database migration completed successfully.');
+        console.log('Platform database migration completed successfully.');
     } finally {
         await connection.end();
     }
