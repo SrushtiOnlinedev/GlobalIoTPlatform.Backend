@@ -31,11 +31,11 @@ The platform separates global customer authentication data from customer-specifi
 - JWT authentication middleware
 - Current authenticated user API (`GET /api/auth/me`)
 - Last-login tracking
+- Authorization / permission middleware
 - Swagger / OpenAPI documentation
 
 ### Planned Scope
 
-- Authorization / permission middleware
 - Email verification
 - Password reset and password change
 - Logout / session management
@@ -818,7 +818,7 @@ Load Customer Roles
   ↓
 Resolve Permission Codes
   ↓
-Authorization Middleware
+Authorization / permission middleware
   ↓
 Allow / Deny API Access
 ```
@@ -826,7 +826,6 @@ Allow / Deny API Access
 Planned authentication/security features:
 
 ```text
-Authorization / Permission Middleware
 Email Verification
 Password Reset / Change
 Logout / Session Management

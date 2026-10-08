@@ -2,6 +2,7 @@ const express = require('express');
 
 const productController = require('../controllers/product.controller');
 const { authenticate } = require('../middleware/auth.middleware');
+const { authorize } = require('../middleware/authorization.middleware');
 
 const router = express.Router();
 
@@ -38,6 +39,14 @@ const router = express.Router();
  *               errors:
  *                 - field: name
  *                   message: 'Too small: expected string to have >=2 characters'
+ *       403:
+ *         description: User does not have the required permission
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
+ *             example:
+ *               message: Access denied.
  *       404:
  *         description: User not found
  *         content:
@@ -58,6 +67,7 @@ const router = express.Router();
 router.post(
     '/',
     authenticate,
+    authorize('PRODUCT_MANAGE'),
     productController.createProduct
 );
 

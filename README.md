@@ -46,6 +46,7 @@ The current backend includes:
 - Last-login tracking
 - Customer-specific roles
 - Platform-defined permissions
+- Authorization / permission middleware
 - Product creation
 - Health-check API
 
@@ -787,11 +788,11 @@ Current User API (/me)             ✅
 Customer-specific Roles            ✅
 Permission Assignment              ✅
 Last Login Tracking                ✅
+Authorization / permission middleware ✅
 Product Creation                   ✅
 Swagger Documentation              ✅
 ```
 
-The current implementation does not yet include permission-based authorization middleware.
 
 ---
 
@@ -799,7 +800,6 @@ The current implementation does not yet include permission-based authorization m
 
 Planned modules include:
 
-- Authorization / permission middleware
 - Email verification
 - Password reset and password change
 - Logout / session management
