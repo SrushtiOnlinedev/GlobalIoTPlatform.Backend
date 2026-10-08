@@ -5,24 +5,27 @@
 1. Authentication Overview
 2. Authentication Concepts
 3. Registration API
-4. Registration Flow & Database Flow
+4. Registration and Database Flow
 5. Login API
-6. Login Flow, JWT & Responses
-7. Testing
-8. Future Authentication Scope
+6. JWT and Current User API
+7. Protected API Behavior
+8. Testing
+9. Future Authentication Scope
 
+---
 
 ## 1. Authentication Overview
 
-This document describes the current authentication design and API flow for the Global IoT Platform backend.
+The platform separates global customer authentication data from customer-specific user and role data.
 
 ### Current Scope
 
 - Customer registration
-- Initial customer user creation
-- Customer-specific Super Admin role creation
+- Isolated Customer DB provisioning
+- Initial Customer Owner creation
+- Customer-specific `Customer Super Admin` role creation
 - Permission assignment
-- Login using email and password
+- Customer login using email and password
 - Password hashing with bcrypt
 - JWT access-token generation
 - JWT authentication middleware
@@ -34,45 +37,68 @@ This document describes the current authentication design and API flow for the G
 
 - Authorization / permission middleware
 - Email verification
-- Password reset and change
+- Password reset and password change
 - Logout / session management
 
 ---
 
 ## 2. Authentication Concepts
 
-The platform separates customer account identity, user identity, roles, permissions, and login credentials.
-
 | Concept | Meaning |
 |---|---|
-| **Customer Account Type** | Type of the customer account, such as `End User`, `Business`, `Individual`, or `Organization / Company`. |
-| **User Type** | Type of user within the customer account, such as `Customer Owner`, `Employee`, `Sub User`, or `External User`. |
-| **Role** | Customer-specific access definition assigned to a user. |
-| **Permission** | Individual action that a role can perform. |
-| **Login Account** | Authentication record containing login email and password hash. |
-
-### Simple Relationship
-
-```text
-Customer Account Type → Customer account
-User Type             → User/person type
-Role                  → User access definition
-Permission            → Individual allowed action
-Login Account         → Authentication credentials
-```
+| **Customer Account Type** | Type of the customer account. Current values: `End User`, `Organization / Company`, `Business`, `Individual`, `Other`. |
+| **User Type** | Platform-defined type stored as `user_type_code` inside the Customer DB. Current codes include `CUSTOMER_OWNER`, `EMPLOYEE`, `SUB_USER`, and `EXTERNAL_USER`. |
+| **Role** | Customer-specific access definition stored in the Customer DB. |
+| **Permission** | Platform-defined capability identified by a stable permission code. |
+| **Login Account** | Platform DB authentication record containing login email and password hash. |
 
 ### Initial Customer User
 
-The first user created during registration is automatically:
+During registration:
 
 ```text
-User Type = Customer Owner
-Role      = Customer Super Admin
+Customer Owner user
+        ↓
+Customer Super Admin role
+        ↓
+All currently active permission codes
 ```
 
-The `Customer Super Admin` role is created specifically for that customer.
+The initial user's user type code is:
 
-Customer-specific roles can be created later by the customer.
+```text
+CUSTOMER_OWNER
+```
+
+The role name is:
+
+```text
+Customer Super Admin
+```
+
+The role is customer-specific and is stored in that customer's Customer DB.
+
+### Database Separation
+
+```text
+Platform DB
+├── customers
+├── customer_login_accounts
+├── customer_databases
+├── account_types
+├── user_types
+└── permissions
+
+Customer DB
+├── users
+├── roles
+├── role_permissions
+└── user_roles
+```
+
+There are no cross-database foreign keys.
+
+Application-level references are used for customer user public IDs, user type codes, and permission codes.
 
 ---
 
@@ -90,44 +116,28 @@ Not required.
 
 ### Purpose
 
-Creates a new customer account and its initial customer user.
-
-The registration process creates:
-
-```text
-Customer
-   ↓
-Customer Owner User
-   ↓
-Customer Super Admin Role
-   ↓
-Role Permissions
-   ↓
-User-Role Assignment
-   ↓
-Login Account
-   ↓
-Optional Account-Type Upgrade Request
-```
+Creates a customer and provisions its isolated Customer DB and initial authenticated user.
 
 ### Request Example
 
 ```json
 {
-  "customerName": "Amit Patel",
+  "customerName": "Example Customer",
   "requestedAccountType": "Business",
-  "customerEmail": "amit.customer@example.com",
-  "mobile": "9876543210",
-  "address": "123 Main Road",
-  "city": "Surat",
-  "state": "Gujarat",
-  "country": "India",
-  "pincode": "395001",
-  "name": "Amit Patel",
-  "email": "amit@example.com",
+  "customerEmail": "customer@example.com",
+  "mobile": "9000000000",
+  "address": "Example Address",
+  "city": "Example City",
+  "state": "Example State",
+  "country": "Example Country",
+  "pincode": "000000",
+  "name": "Example User",
+  "email": "user@example.com",
   "password": "Password@123"
 }
 ```
+
+`requestedAccountType`, `address`, `city`, `state`, `country`, and `pincode` are optional.
 
 ### Required Fields
 
@@ -140,30 +150,17 @@ email
 password
 ```
 
-### Optional Fields
-
-```text
-requestedAccountType
-address
-city
-state
-country
-pincode
-```
-
 ### Validation
 
-General validation:
-
 ```text
-customerName → 2–200 characters
-customerEmail → valid email, maximum 320 characters
-mobile → 7–30 characters
-name → 2–200 characters
-email → valid email, maximum 320 characters
+customerName       → 2–200 characters
+customerEmail      → valid email, maximum 320 characters
+mobile             → 7–30 characters
+name               → 2–200 characters
+email              → valid email, maximum 320 characters
 ```
 
-Optional text fields are validated according to their configured maximum lengths.
+Optional text fields use their configured maximum lengths.
 
 ### Password Policy
 
@@ -183,45 +180,45 @@ Password@123
 
 ### Account-Type Behavior
 
-The requested account type is treated as an account upgrade request.
-
-The customer is initially created with the current default account type:
+The customer is initially created as:
 
 ```text
 End User
 ```
 
-#### No Account Type Selected
+If `requestedAccountType` is omitted:
 
 ```text
 Registration
-   ↓
+    ↓
 Actual Account Type = End User
-   ↓
+    ↓
 No upgrade request
 ```
 
-#### Account Type Selected
-
-Example:
+If a different valid account type is supplied:
 
 ```text
 requestedAccountType = Business
-```
 
-Result:
-
-```text
 Actual Account Type    = End User
 Requested Account Type = Business
-Upgrade Request        = Pending
+Upgrade Request        = PENDING
 ```
 
 The requested account type does not become active automatically.
 
-Only platform-defined account types can be requested.
+Valid current account types are:
 
-### Registration Responses
+```text
+End User
+Organization / Company
+Business
+Individual
+Other
+```
+
+### Registration Response
 
 #### 201 Created
 
@@ -231,11 +228,7 @@ Only platform-defined account types can be requested.
 }
 ```
 
-#### 400 Bad Request
-
-Used for invalid request data or an invalid requested account type.
-
-Validation example:
+#### 400 Bad Request — Validation
 
 ```json
 {
@@ -249,7 +242,7 @@ Validation example:
 }
 ```
 
-Invalid account type:
+#### 400 Bad Request — Invalid Account Type
 
 ```json
 {
@@ -259,15 +252,13 @@ Invalid account type:
 
 #### 409 Conflict
 
-Used when registration cannot be completed with the provided details, including duplicate login email.
-
 ```json
 {
   "message": "Registration cannot be completed with the provided details."
 }
 ```
 
-The API does not reveal whether a specific email already belongs to an account.
+The same generic conflict response is used for duplicate login email conditions.
 
 #### 500 Internal Server Error
 
@@ -281,13 +272,13 @@ Detailed internal errors are not returned to the client.
 
 ---
 
-## 4. Registration Flow & Database Flow
+## 4. Registration and Database Flow
+
+Registration crosses the Platform DB and a new Customer DB, so there is no single MySQL transaction covering the entire process.
 
 ### Backend Flow
 
 ```text
-Client / Swagger / Postman
-        ↓
 POST /api/auth/register
         ↓
 Route
@@ -296,106 +287,98 @@ Controller
         ↓
 Zod Validation
         ↓
-Authentication Service
+Check duplicate login email
         ↓
-BEGIN TRANSACTION
+Read default account type = End User
         ↓
-Validate Default Account Type
+Validate requested account type when supplied
         ↓
-Validate Customer Owner User Type
+Create Customer in Platform DB
         ↓
-Create Customer
+Create customer_databases mapping = PROVISIONING
         ↓
-Create Customer Super Admin Role
+Generate Customer DB name
         ↓
-Assign Active Permissions
+Create Customer DB
         ↓
-Create Customer Owner User
+Apply Customer DB schema/migrations
         ↓
-Assign Super Admin Role
+Create Customer Owner user
         ↓
-Hash Password with bcrypt
+Create Customer Super Admin role
         ↓
-Create Login Account
+Read active Platform permissions
         ↓
-Check Optional Requested Account Type
+Assign permission codes in Customer DB
         ↓
-Create Upgrade Request when required
+Assign role to Customer Owner
         ↓
-COMMIT
+Create customer_login_accounts record in Platform DB
+        ↓
+Create upgrade request when required
+        ↓
+Mark Customer DB mapping = ACTIVE
         ↓
 201 Created
 ```
 
-If an operation fails:
+### Failure Handling
+
+If provisioning fails after the mapping exists:
 
 ```text
 Error
   ↓
-ROLLBACK
+customer_databases.provisioning_status = FAILED
+  ↓
+Failure time and error are recorded
 ```
 
-This prevents partial registration data.
+The implementation does not use a cross-database transaction. Incomplete resources may be cleaned up separately; established customer data must not be blindly deleted.
 
-### Database Flow
+### Platform DB Tables Touched
 
 ```text
 customers
     ↓
-users
-    ├── user_type → user_types
-    └── user_roles → roles
-                       ↓
-                role_permissions
-                       ↓
-                  permissions
+customer_databases
 
 customer_login_accounts
-    ├── customer_id → customers
-    ├── user_id → users
-    └── actual_account_type_id → account_types
 
-account_type_upgrade_requests
-    ├── customer_id → customers
-    ├── current_account_type_id → account_types
-    └── requested_account_type_id → account_types
+account_type_upgrade_requests   ← only when required
 ```
 
-### Table Responsibilities
+`customers.account_type_id` stores the customer's current account type.
 
-| Table                           | Responsibility                                  |
-| ------------------------------- | ----------------------------------------------- |
-| `customers`                     | Stores customer account information.            |
-| `users`                         | Stores customer users.                          |
-| `user_types`                    | Provides predefined user types.                 |
-| `roles`                         | Stores customer-specific roles.                 |
-| `permissions`                   | Stores platform-defined permissions.            |
-| `role_permissions`              | Assigns permissions to roles.                   |
-| `user_roles`                    | Assigns roles to users.                         |
-| `customer_login_accounts`       | Stores login email and password hash.           |
-| `account_types`                 | Stores platform-defined customer account types. |
-| `account_type_upgrade_requests` | Stores optional account-type upgrade requests.  |
-
-### Role Model
-
-Roles are customer-specific.
-
-Example:
+### Customer DB Tables Touched
 
 ```text
-Customer A
-├── Customer Super Admin
-├── Technician
-└── Viewer
+users
+    ↓
+roles
+    ↓
+role_permissions
 
-Customer B
-├── Customer Super Admin
-└── Sales
+users
+    ↓
+user_roles
 ```
 
-The platform defines permissions, while each customer can create its own roles.
+### Permission Model
 
-The initial `Customer Super Admin` role receives all currently active permissions during registration.
+Platform DB:
+
+```text
+permissions.code
+```
+
+Customer DB:
+
+```text
+role_permissions.permission_code
+```
+
+The permission code is an application-level reference. There is no cross-database foreign key.
 
 ---
 
@@ -413,29 +396,39 @@ Not required.
 
 ### Purpose
 
-Authenticates an existing customer user and issues a JWT access token.
+Authenticates an existing customer user and returns a JWT access token.
 
 ### Request
 
 ```json
 {
-  "email": "final.user@example.com",
+  "email": "user@example.com",
   "password": "Password@123"
 }
 ```
 
 Both fields are required.
 
-### Login Rules
+### Login Flow
 
 ```text
 Email + Password
       ↓
-Find Login Account
+Find customer_login_accounts
       ↓
-Check Login Account / Customer / User status
+Check login account status
       ↓
-Verify Password with bcrypt
+Check customer status
+      ↓
+Check Customer DB status and provisioning status
+      ↓
+Resolve Customer DB
+      ↓
+Find user by user_public_id
+      ↓
+Check user status
+      ↓
+Verify password with bcrypt
       ↓
 Update last_login_at
       ↓
@@ -444,16 +437,16 @@ Generate JWT
 200 OK
 ```
 
-Authentication failures use the same response so the API does not expose which authentication condition failed.
+Authentication failures use a generic response.
 
-### Login Responses
+### Login Response
 
 #### 200 OK
 
 ```json
 {
   "message": "Login successful.",
-  "accessToken": "eyJ...",
+  "accessToken": "<jwt-token>",
   "tokenType": "Bearer",
   "expiresIn": "1h"
 }
@@ -461,7 +454,7 @@ Authentication failures use the same response so the API does not expose which a
 
 #### 400 Bad Request
 
-Used when the login request format is invalid.
+Used for invalid request data.
 
 ```json
 {
@@ -477,15 +470,13 @@ Used when the login request format is invalid.
 
 #### 401 Unauthorized
 
-Used for authentication failure, including unknown email, incorrect password, or inactive login/customer/user records.
+Used for authentication failure, including unknown email, incorrect password, inactive records, or an unavailable Customer DB.
 
 ```json
 {
   "message": "Invalid credentials."
 }
 ```
-
-The same message is used for all authentication failures.
 
 #### 500 Internal Server Error
 
@@ -495,52 +486,22 @@ The same message is used for all authentication failures.
 }
 ```
 
-Detailed internal errors are not returned to the client.
+### Last Login
+
+On successful login, `customer_login_accounts.last_login_at` is updated.
 
 ---
 
-## 6. Login Flow, JWT & Responses
-
-### Login Database Flow
-
-The login process uses the following relationships:
-
-```text
-customer_login_accounts
-        ↓
-customers
-        ↓
-users
-        ↓
-user_types
-        ↓
-account_types
-```
-
-Roles and permissions are maintained through:
-
-```text
-users
-   ↓
-user_roles
-   ↓
-roles
-   ↓
-role_permissions
-   ↓
-permissions
-```
-
-The Login API currently focuses on credential verification and access-token issuance.
+## 6. JWT and Current User API
 
 ### JWT Payload
 
-The current JWT contains only the identifiers required to identify the authenticated context:
+The current token contains:
 
 ```json
 {
-  "userPublicId": "...",
-  "customerPublicId": "..."
+  "userPublicId": "<user-public-id>",
+  "customerPublicId": "<customer-public-id>"
 }
 ```
 
@@ -548,26 +509,20 @@ Roles and permissions are not stored in the JWT.
 
 ### Token Configuration
 
-Configured through environment variables:
-
 ```env
 JWT_SECRET=your_jwt_secret_here
 JWT_EXPIRES_IN=1h
 ```
 
-The actual secret is stored only in `.env` and must not be committed to Git.
+The secret is local configuration and must not be committed.
 
-### Token Usage
+### Authentication Middleware
 
-Protected APIs will use:
+Protected APIs use:
 
 ```http
 Authorization: Bearer <accessToken>
 ```
-
-### JWT Authentication Middleware
-
-Protected APIs use JWT authentication middleware.
 
 The middleware:
 
@@ -580,59 +535,61 @@ Extract Bearer token
    ↓
 Verify JWT
    ↓
-Set authenticated user context
+Set req.auth
    ↓
-Continue to protected API
+Continue
 ```
 
-The current JWT payload contains:
-```json
-{
-  "userPublicId": "...",
-  "customerPublicId": "..."
-}
-```
+Missing or invalid authentication returns `401 Unauthorized`.
 
-The authenticated context is available to protected APIs through the request.
+### Current User API
 
-##Current User API
+#### Endpoint
 
-###Endpoint
 ```http
 GET /api/auth/me
 ```
 
-Authentication
-  Required.
+Authentication required.
 
-```http
-Authorization: Bearer <accessToken>
+#### Request Body
+
+No request body.
+
+#### Database Flow
+
+```text
+JWT.customerPublicId
+        ↓
+Platform DB
+        ↓
+customers
+        ↓
+customer_databases
+        ↓
+Resolve Customer DB
+        ↓
+Customer DB users
+        ↓
+Build response
 ```
 
-Purpose
+The account type is read from the Platform DB. The user type is read from the Customer DB.
 
-  Returns the currently authenticated user's basic identity and customer context.
-
-Request Body
-
-  No request body is required.
-
-Successful Response
-
-HTTP 200 OK
+#### Successful Response — 200 OK
 
 ```json
 {
   "message": "Current user retrieved successfully.",
   "user": {
-    "userPublicId": "550e8400-e29b-41d4-a716-446655440000",
+    "userPublicId": "<user-public-id>",
     "name": "Example User",
     "email": "user@example.com",
-    "mobile": "9990000000",
-    "userType": "Customer Owner",
+    "mobile": "9000000000",
+    "userType": "CUSTOMER_OWNER",
     "accountType": "End User",
     "customer": {
-      "customerPublicId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "customerPublicId": "<customer-public-id>",
       "name": "Example Customer",
       "email": "customer@example.com"
     }
@@ -640,78 +597,97 @@ HTTP 200 OK
 }
 ```
 
-Error Responses
+#### 401 Unauthorized — Missing Token
 
-401 Unauthorized — Authentication required
 ```json
 {
   "message": "Authentication required."
 }
 ```
 
-401 Unauthorized — Invalid or expired token
+#### 401 Unauthorized — Invalid or Expired Token
+
 ```json
 {
   "message": "Invalid or expired token."
 }
 ```
 
-404 Not Found
+#### 404 Not Found
+
 ```json
 {
   "message": "User not found."
 }
 ```
 
-500 Internal Server Error
+#### 500 Internal Server Error
+
 ```json
 {
   "message": "An unexpected error occurred."
 }
 ```
 
-The API uses the customer and user public identifiers from the JWT to retrieve the authenticated user's context.
+---
 
-### Authentication vs Authorization
+## 7. Protected API Behavior
 
-```text
-Authentication
-→ Who is the user?
+### Create Product
 
-Authorization
-→ What is the user allowed to do?
+```http
+POST /api/products
 ```
 
-The JWT identifies the authenticated user and customer.
+Authentication required.
 
-Authentication is handled by JWT middleware.
+Request:
 
-Authorization is separate from authentication and will use customer-specific roles and platform-defined permissions through authorization middleware.
+```json
+{
+  "name": "Example Product",
+  "modelNumber": "Example Model",
+  "description": "Example product description"
+}
+```
+
+Flow:
+
+```text
+JWT
+  ↓
+customerPublicId
+  ↓
+Platform DB
+  ↓
+customer_databases
+  ↓
+Customer DB
+  ↓
+users
+  ↓
+Verify authenticated user
+  ↓
+products
+  ↓
+Create product
+```
+
+The product is stored only in the authenticated customer's Customer DB.
+
+The current endpoint authenticates the user but does not yet enforce a permission such as `PRODUCT_MANAGE`. Permission-based authorization is the next stage.
 
 ---
 
-## 7. Testing
+## 8. Testing
 
-Testing can be performed using Swagger or Postman.
-
-### Register
+### Register — Success
 
 ```http
 POST http://localhost:3000/api/auth/register
 ```
 
-#### Test: Successful Registration
-
-```json
-{
-  "customerName": "Postman Test Customer",
-  "customerEmail": "postman.customer@example.com",
-  "mobile": "9876543220",
-  "name": "Postman Test User",
-  "email": "postman.user@example.com",
-  "password": "Password@123"
-}
-```
+Use the generic request example above.
 
 Expected:
 
@@ -719,96 +695,9 @@ Expected:
 201 Created
 ```
 
-```json
-{
-  "message": "Customer registered successfully."
-}
-```
+### Register — Invalid Account Type
 
-Database result:
-
-```text
-customers                     → new row
-users                         → new row
-roles                         → customer Super Admin role
-role_permissions              → active permissions assigned
-user_roles                    → role assigned to user
-customer_login_accounts       → new login account
-account_type_upgrade_requests → no new row
-```
-
-#### Test: Business Account Request
-
-```json
-{
-  "customerName": "Business Test Customer",
-  "requestedAccountType": "Business",
-  "customerEmail": "business.customer@example.com",
-  "mobile": "9876543216",
-  "name": "Business Test User",
-  "email": "business.user@example.com",
-  "password": "Password@123"
-}
-```
-
-Expected:
-
-```text
-201 Created
-
-Actual Account Type    = End User
-Requested Account Type = Business
-Upgrade Request        = Pending
-```
-
-#### Test: Invalid Password
-
-```json
-{
-  "customerName": "Validation Test",
-  "customerEmail": "validation@example.com",
-  "mobile": "9876543217",
-  "name": "Validation User",
-  "email": "validation.user@example.com",
-  "password": "password"
-}
-```
-
-Expected:
-
-```text
-400 Bad Request
-```
-
-#### Test: Duplicate Email
-
-Use an email that already exists.
-
-Expected:
-
-```text
-409 Conflict
-```
-
-```json
-{
-  "message": "Registration cannot be completed with the provided details."
-}
-```
-
-#### Test: Invalid Account Type
-
-```json
-{
-  "customerName": "Invalid Type Test",
-  "requestedAccountType": "SomethingRandom",
-  "customerEmail": "invalid.type@example.com",
-  "mobile": "9876543218",
-  "name": "Invalid Type User",
-  "email": "invalid.type.user@example.com",
-  "password": "Password@123"
-}
-```
+Use a value that is not one of the platform-defined account types.
 
 Expected:
 
@@ -822,19 +711,22 @@ Expected:
 }
 ```
 
-### Login
+No customer or Customer DB should be created for this validation failure.
+
+### Register — Duplicate Email
+
+Use an already-registered login email.
+
+Expected:
+
+```text
+409 Conflict
+```
+
+### Login — Success
 
 ```http
 POST http://localhost:3000/api/auth/login
-```
-
-#### Test: Successful Login
-
-```json
-{
-  "email": "user@example.com",
-  "password": "Password@123"
-}
 ```
 
 Expected:
@@ -843,37 +735,9 @@ Expected:
 200 OK
 ```
 
-```json
-{
-  "message": "Login successful.",
-  "accessToken": "eyJ...",
-  "tokenType": "Bearer",
-  "expiresIn": "1h"
-}
-```
+Save the returned `accessToken` for protected requests.
 
-Verify last login:
--Replace `<registered-user-email>` with the email of the account used for testing.
-
-```sql
-SELECT
-    id,
-    email,
-    last_login_at
-FROM customer_login_accounts
-WHERE email = '<registered-user-email>';
-```
-
-`last_login_at` should contain the latest successful login time.
-
-#### Test: Wrong Password
-
-```json
-{
-  "email": "user@example.com",
-  "password": "WrongPassword@123"
-}
-```
+### Login — Wrong Password or Unknown Email
 
 Expected:
 
@@ -885,105 +749,6 @@ Expected:
 {
   "message": "Invalid credentials."
 }
-```
-
-#### Test: Unknown Email
-
-```json
-{
-  "email": "doesnotexist@example.com",
-  "password": "Password@123"
-}
-```
-
-Expected:
-
-```text
-401 Unauthorized
-```
-
-```json
-{
-  "message": "Invalid credentials."
-}
-```
-
-The unknown-email and wrong-password responses are intentionally identical.
-
-### Database Verification
-
-Latest customer:
-
-```sql
-SELECT *
-FROM customers
-ORDER BY id DESC
-LIMIT 1;
-```
-
-Latest user:
-
-```sql
-SELECT *
-FROM users
-ORDER BY id DESC
-LIMIT 1;
-```
-
-Latest role:
-
-```sql
-SELECT *
-FROM roles
-ORDER BY id DESC
-LIMIT 1;
-```
-
-Latest role assignment:
-
-```sql
-SELECT *
-FROM user_roles
-ORDER BY assigned_at DESC
-LIMIT 1;
-```
-
-Latest login account:
-
-```sql
-SELECT *
-FROM customer_login_accounts
-ORDER BY id DESC
-LIMIT 1;
-```
-
-Latest upgrade request:
-
-```sql
-SELECT *
-FROM account_type_upgrade_requests
-ORDER BY id DESC
-LIMIT 1;
-```
-
-Role permissions:
-
-```sql
-SELECT
-    r.id,
-    r.customer_id,
-    r.name,
-    p.code
-FROM roles r
-JOIN role_permissions rp
-    ON rp.role_id = r.id
-JOIN permissions p
-    ON p.id = rp.permission_id
-WHERE r.id = (
-    SELECT MAX(id)
-    FROM roles
-)
-ORDER BY p.id;
 ```
 
 ### Current User
@@ -992,23 +757,13 @@ ORDER BY p.id;
 GET http://localhost:3000/api/auth/me
 ```
 
-Use the access token returned by Login:
+Use:
 
 ```http
 Authorization: Bearer <accessToken>
 ```
 
-Expected:
-
-```text
-200 OK
-```
-
-The response contains the authenticated user's identity, user type, account type, and customer information.
-
-#### Test: Missing Token
-
-Send the request without the Authorization header.
+### Protected API Without Token
 
 Expected:
 
@@ -1022,9 +777,7 @@ Expected:
 }
 ```
 
-#### Test: Invalid or Expired Token
-
-Send an invalid or expired Bearer token.
+### Protected API With Invalid Token
 
 Expected:
 
@@ -1040,40 +793,41 @@ Expected:
 
 ---
 
-## 8. Future Authentication Scope
+## 9. Future Authentication Scope
 
-The next authentication steps are:
+Current flow:
 
 ```text
 Login
   ↓
-JWT Access Token
+JWT
   ↓
-JWT Authentication Middleware
-  ↓
-GET /api/auth/me
+Authentication Middleware
   ↓
 Authenticated User Context
   ↓
-Authorization Middleware
-  ↓
-Permission-based Protected APIs
+Protected API
 ```
 
-### Planned Features
+Next:
+
+```text
+Authenticated User Context
+  ↓
+Load Customer Roles
+  ↓
+Resolve Permission Codes
+  ↓
+Authorization Middleware
+  ↓
+Allow / Deny API Access
+```
+
+Planned authentication/security features:
 
 ```text
 Authorization / Permission Middleware
-→ Check customer-specific roles and permissions
-
 Email Verification
-→ Verify the user's email before enabling the related account flow
-
 Password Reset / Change
-→ Secure password management
-
 Logout / Session Management
-→ Token/session lifecycle management
 ```
-
-Email verification is not part of the current registration/login flow and can be added later.
