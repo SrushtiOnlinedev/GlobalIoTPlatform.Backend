@@ -55,6 +55,33 @@ const createProduct = async (
     };
 };
 
+const getProducts = async (
+    userPublicId,
+    customerPublicId
+) => {
+    const customerDb =
+        await getCustomerDatabaseConnection(
+            customerPublicId
+        );
+
+    const user =
+        await userRepository.getUserByPublicId(
+            customerDb,
+            userPublicId
+        );
+
+    if (!user || user.status !== 1) {
+        const error = new Error('User not found.');
+        error.code = 'USER_NOT_FOUND';
+        throw error;
+    }
+
+    return productRepository.getActiveProducts(
+        customerDb
+    );
+};
+
 module.exports = {
-    createProduct
+    createProduct,
+    getProducts
 };

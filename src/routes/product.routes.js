@@ -71,4 +71,54 @@ router.post(
     productController.createProduct
 );
 
+
+/**
+ * @swagger
+ * /api/products:
+ *   get:
+ *     summary: List active products
+ *     description: Returns active products from the authenticated customer's database.
+ *     tags:
+ *       - Products
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Products retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductListResponse'
+ *       401:
+ *         description: Authentication required or token invalid.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
+ *       403:
+ *         description: Access denied.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
+ *       404:
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
+ *       500:
+ *         description: Unexpected server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
+ */
+router.get(
+    '/',
+    authenticate,
+    authorize('DEVICE_MANAGE'),
+    productController.getProducts
+);
+
 module.exports = router;

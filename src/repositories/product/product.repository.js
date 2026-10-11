@@ -25,6 +25,24 @@ const createProduct = async (connection, product) => {
     return result.insertId;
 };
 
+const getActiveProducts = async (connection) => {
+    const [rows] = await connection.execute(
+        `
+        SELECT
+            public_id AS productPublicId,
+            name,
+            model_number AS modelNumber,
+            description
+        FROM products
+        WHERE status = 1
+        ORDER BY name ASC
+        `
+    );
+
+    return rows;
+};
+
 module.exports = {
-    createProduct
+    createProduct,
+    getActiveProducts
 };

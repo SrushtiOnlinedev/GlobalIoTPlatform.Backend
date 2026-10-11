@@ -655,7 +655,8 @@ GlobalIoTPlatform.Backend/
 │   │       └── create-product.dto.js
 │   │
 │   ├── middleware/
-│   │   └── auth.middleware.js
+│   │    ├── auth.middleware.js
+│   │    └── authorization.middleware.js
 │   │
 │   ├── repositories/
 │   │   ├── auth/
@@ -667,6 +668,7 @@ GlobalIoTPlatform.Backend/
 │   │   ├── customer-database/
 │   │   │   └── customer-database.repository.js
 │   │   ├── customer-db/
+│   │   │   ├── authorization.repository.js
 │   │   │   ├── role-permission.repository.js
 │   │   │   ├── role.repository.js
 │   │   │   ├── user-role.repository.js

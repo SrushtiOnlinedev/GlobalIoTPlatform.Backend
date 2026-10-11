@@ -244,6 +244,24 @@ const options = {
                                 }
                             }
                         }
+                    },
+                    example: {
+                        message: 'Current user retrieved successfully.',
+                        user: {
+                            userPublicId:
+                                '00000000-0000-4000-8000-000000000010',
+                            name: 'Example User',
+                            email: 'user@example.com',
+                            mobile: '9000000000',
+                            userType: 'CUSTOMER_OWNER',
+                            accountType: 'End User',
+                            customer: {
+                                customerPublicId:
+                                    '00000000-0000-4000-8000-000000000020',
+                                name: 'Example Customer',
+                                email: 'customer@example.com'
+                            }
+                        }
                     }
                 },
 
@@ -373,6 +391,328 @@ const options = {
                         message: {
                             type: 'string',
                             example: 'Product created successfully.'
+                        }
+                    }
+                },
+
+                ProductListResponse: {
+                    type: 'object',
+                    required: ['products'],
+                    properties: {
+                        products: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                required: [
+                                    'productPublicId',
+                                    'name'
+                                ],
+                                properties: {
+                                    productPublicId: {
+                                        type: 'string',
+                                        format: 'uuid'
+                                    },
+                                    name: {
+                                        type: 'string',
+                                        example: 'Example Product'
+                                    },
+                                    modelNumber: {
+                                        type: 'string',
+                                        nullable: true,
+                                        example: 'Example Model'
+                                    },
+                                    description: {
+                                        type: 'string',
+                                        nullable: true,
+                                        example: 'Example product description'
+                                    }
+                                },
+                                example: {
+                                    products: [
+                                        {
+                                            productPublicId:
+                                                '00000000-0000-4000-8000-000000000001',
+                                            name: 'Example Product',
+                                            modelNumber: 'EXAMPLE-MODEL',
+                                            description: 'Example product description'
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+
+                CreateDeviceRequest: {
+                    type: 'object',
+
+                    required: [
+                        'serialNumber',
+                        'productPublicId'
+                    ],
+
+                    properties: {
+                        deviceName: {
+                            type: 'string',
+                            minLength: 2,
+                            maxLength: 150,
+                            example: 'Example Device'
+                        },
+
+                        serialNumber: {
+                            type: 'string',
+                            minLength: 1,
+                            maxLength: 100,
+                            example: 'EXAMPLE-SERIAL-001'
+                        },
+
+                        modelNumber: {
+                            type: 'string',
+                            maxLength: 100,
+                            example: 'EXAMPLE-MODEL'
+                        },
+
+                        productPublicId: {
+                            type: 'string',
+                            format: 'uuid',
+                            description:
+                                'Replace this placeholder with an active productPublicId returned by GET /api/products.',
+                            example:
+                                '00000000-0000-4000-8000-000000000001'
+                        },
+
+                        organizationPublicId: {
+                            type: 'string',
+                            format: 'uuid',
+                            description:
+                                'Optional. Use an existing organization public ID.',
+                            example:
+                                '00000000-0000-4000-8000-000000000002'
+                        },
+
+                        locationPublicId: {
+                            type: 'string',
+                            format: 'uuid',
+                            description:
+                                'Optional. Use an existing location public ID.',
+                            example:
+                                '00000000-0000-4000-8000-000000000003'
+                        },
+
+                        macAddress: {
+                            type: 'string',
+                            maxLength: 50,
+                            example: 'EXAMPLE-MAC'
+                        },
+
+                        imeiNumber: {
+                            type: 'string',
+                            maxLength: 50,
+                            example: 'EXAMPLE-IMEI'
+                        },
+
+                        simNumber: {
+                            type: 'string',
+                            maxLength: 30,
+                            example: 'EXAMPLE-SIM'
+                        },
+
+                        activationKey: {
+                            type: 'string',
+                            maxLength: 100,
+                            example: 'EXAMPLE-ACTIVATION-KEY'
+                        },
+
+                        qrCode: {
+                            type: 'string',
+                            maxLength: 255,
+                            example: 'EXAMPLE-QR-CODE'
+                        },
+
+                        manufactureDate: {
+                            type: 'string',
+                            format: 'date',
+                            example: '2000-01-01'
+                        },
+
+                        installationDate: {
+                            type: 'string',
+                            format: 'date',
+                            example: '2000-01-01'
+                        },
+
+                        warrantyExpiry: {
+                            type: 'string',
+                            format: 'date',
+                            example: '2000-01-01'
+                        },
+
+                        remarks: {
+                            type: 'string',
+                            maxLength: 5000,
+                            example: 'Example registration note'
+                        }
+                    },
+
+                    example: {
+                        deviceName: 'Example Device',
+                        serialNumber: 'EXAMPLE-SERIAL-001',
+                        modelNumber: 'EXAMPLE-MODEL',
+                        productPublicId:
+                            '00000000-0000-4000-8000-000000000001',
+                        remarks: 'Example registration note'
+                    }
+                },
+
+                DeviceListResponse: {
+                    type: 'object',
+                    required: ['devices', 'pagination'],
+                    properties: {
+                        devices: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    devicePublicId: { type: 'string', format: 'uuid' },
+                                    deviceCode: { type: 'string', example: 'DEV-A1B2C3D4' },
+                                    deviceName: { type: 'string', nullable: true },
+                                    serialNumber: { type: 'string' },
+                                    modelNumber: { type: 'string', nullable: true },
+                                    macAddress: { type: 'string', nullable: true },
+                                    imeiNumber: { type: 'string', nullable: true },
+                                    simNumber: { type: 'string', nullable: true },
+                                    manufactureDate: { type: 'string', format: 'date', nullable: true },
+                                    installationDate: { type: 'string', format: 'date', nullable: true },
+                                    warrantyExpiry: { type: 'string', format: 'date', nullable: true },
+                                    status: { type: 'integer', example: 1 },
+                                    remarks: { type: 'string', nullable: true },
+                                    createdAt: { type: 'string', format: 'date-time' },
+                                    updatedAt: { type: 'string', format: 'date-time' },
+                                    productPublicId: { type: 'string', format: 'uuid' },
+                                    productName: { type: 'string', example: 'Example Product' },
+                                    productModelNumber: { type: 'string', nullable: true },
+                                    organizationPublicId: { type: 'string', format: 'uuid', nullable: true },
+                                    organizationName: { type: 'string', nullable: true },
+                                    locationPublicId: { type: 'string', format: 'uuid', nullable: true },
+                                    locationName: { type: 'string', nullable: true }
+                                }
+                            }
+                        },
+                        pagination: {
+                            type: 'object',
+                            required: [
+                                'page',
+                                'pageSize',
+                                'totalItems',
+                                'totalPages'
+                            ],
+                            properties: {
+                                page: { type: 'integer', example: 1 },
+                                pageSize: { type: 'integer', example: 20 },
+                                totalItems: { type: 'integer', example: 0 },
+                                totalPages: { type: 'integer', example: 0 }
+                            }
+                        }
+                    },
+                    example: {
+                        devices: [
+                            {
+                                devicePublicId:
+                                    '00000000-0000-4000-8000-000000000010',
+                                deviceCode: 'DEV-00000000',
+                                deviceName: 'Example Device',
+                                serialNumber: 'EXAMPLE-SERIAL-001',
+                                modelNumber: 'EXAMPLE-MODEL',
+                                macAddress: null,
+                                imeiNumber: null,
+                                simNumber: null,
+                                manufactureDate: null,
+                                installationDate: null,
+                                warrantyExpiry: null,
+                                status: 1,
+                                remarks: 'Example registration note',
+                                createdAt: '2000-01-01T00:00:00.000Z',
+                                updatedAt: '2000-01-01T00:00:00.000Z',
+                                productPublicId:
+                                    '00000000-0000-4000-8000-000000000001',
+                                productName: 'Example Product',
+                                productModelNumber: 'EXAMPLE-PRODUCT-MODEL',
+                                organizationPublicId: null,
+                                organizationName: null,
+                                locationPublicId: null,
+                                locationName: null
+                            }
+                        ],
+                        pagination: {
+                            page: 1,
+                            pageSize: 20,
+                            totalItems: 1,
+                            totalPages: 1
+                        }
+                    }
+                },
+
+                DeviceDetailsResponse: {
+                    type: 'object',
+                    required: ['message', 'device'],
+                    properties: {
+                        message: {
+                            type: 'string',
+                            example: 'Device retrieved successfully.'
+                        },
+                        device: {
+                            type: 'object',
+                            properties: {
+                                devicePublicId: { type: 'string', format: 'uuid' },
+                                deviceCode: { type: 'string', example: 'DEV-00000000' },
+                                deviceName: { type: 'string', nullable: true },
+                                serialNumber: { type: 'string', example: 'EXAMPLE-SERIAL-001' },
+                                modelNumber: { type: 'string', nullable: true },
+                                macAddress: { type: 'string', nullable: true },
+                                imeiNumber: { type: 'string', nullable: true },
+                                simNumber: { type: 'string', nullable: true },
+                                manufactureDate: { type: 'string', format: 'date', nullable: true },
+                                installationDate: { type: 'string', format: 'date', nullable: true },
+                                warrantyExpiry: { type: 'string', format: 'date', nullable: true },
+                                status: { type: 'integer', example: 1 },
+                                remarks: { type: 'string', nullable: true },
+                                createdAt: { type: 'string', format: 'date-time' },
+                                updatedAt: { type: 'string', format: 'date-time' },
+                                productPublicId: { type: 'string', format: 'uuid' },
+                                productName: { type: 'string', example: 'Example Product' },
+                                productModelNumber: { type: 'string', nullable: true },
+                                organizationPublicId: { type: 'string', format: 'uuid', nullable: true },
+                                organizationName: { type: 'string', nullable: true },
+                                locationPublicId: { type: 'string', format: 'uuid', nullable: true },
+                                locationName: { type: 'string', nullable: true }
+                            }
+                        }
+                    },
+                    example: {
+                        message: 'Device retrieved successfully.',
+                        device: {
+                            devicePublicId: '00000000-0000-4000-8000-000000000010',
+                            deviceCode: 'DEV-00000000',
+                            deviceName: 'Example Device',
+                            serialNumber: 'EXAMPLE-SERIAL-001',
+                            modelNumber: 'EXAMPLE-MODEL',
+                            macAddress: null,
+                            imeiNumber: null,
+                            simNumber: null,
+                            manufactureDate: null,
+                            installationDate: null,
+                            warrantyExpiry: null,
+                            status: 1,
+                            remarks: 'Example registration note',
+                            createdAt: '2000-01-01T00:00:00.000Z',
+                            updatedAt: '2000-01-01T00:00:00.000Z',
+                            productPublicId: '00000000-0000-4000-8000-000000000001',
+                            productName: 'Example Product',
+                            productModelNumber: 'EXAMPLE-PRODUCT-MODEL',
+                            organizationPublicId: null,
+                            organizationName: null,
+                            locationPublicId: null,
+                            locationName: null
                         }
                     }
                 },

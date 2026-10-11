@@ -47,6 +47,37 @@ const createProduct = async (req, res) => {
     }
 };
 
+const getProducts = async (req, res) => {
+    try {
+        const {
+            userPublicId,
+            customerPublicId
+        } = req.auth;
+
+        const products = await productService.getProducts(
+            userPublicId,
+            customerPublicId
+        );
+
+        return res.status(200).json({
+            products
+        });
+    } catch (error) {
+        if (error.code === 'USER_NOT_FOUND') {
+            return res.status(404).json({
+                message: 'User not found.'
+            });
+        }
+
+        console.error('Get products error:', error);
+
+        return res.status(500).json({
+            message: 'An unexpected error occurred.'
+        });
+    }
+};
+
 module.exports = {
-    createProduct
+    createProduct,
+    getProducts
 };
