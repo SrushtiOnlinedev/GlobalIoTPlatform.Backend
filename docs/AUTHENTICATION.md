@@ -32,6 +32,7 @@ The platform separates global customer authentication data from customer-specifi
 - Current authenticated user API (`GET /api/auth/me`)
 - Last-login tracking
 - Authorization / permission middleware
+- Permission checks on protected product and device APIs
 - Swagger / OpenAPI documentation
 
 ### Planned Scope
@@ -633,49 +634,76 @@ The account type is read from the Platform DB. The user type is read from the Cu
 
 ## 7. Protected API Behavior
 
-### Create Product
+Protected APIs use two separate checks:
+
+1. `authenticate` verifies the Bearer JWT and builds the authenticated context (`userPublicId` and `customerPublicId`).
+2. `authorize(permissionCode)` checks whether the authenticated user has the permission required by the route.
+
+Roles and permissions are not stored in the JWT. Permission checks use the customer's role and permission assignments in the Customer DB, together with the platform permission definitions.
+
+### Current route permission map
+
+| Method | Endpoint | Required access |
+|---|---|---|
+| `GET` | `/api/auth/me` | Authenticated user |
+| `POST` | `/api/products` | `PRODUCT_MANAGE` |
+| `GET` | `/api/products` | `DEVICE_MANAGE` (current route configuration) |
+| `POST` | `/api/devices` | `DEVICE_MANAGE` |
+| `GET` | `/api/devices` | `DEVICE_DATA_VIEW` |
+| `GET` | `/api/devices/{devicePublicId}` | `DEVICE_DATA_VIEW` |
+| `GET` | `/api/devices/{devicePublicId}/live` | `DEVICE_DATA_VIEW` |
+
+`GET /api/health`, registration, and login do not require a customer Bearer token.
+
+### Example: create a product
 
 ```http
 POST /api/products
+Authorization: Bearer <accessToken>
+Content-Type: application/json
 ```
-
-Authentication required.
-
-Request:
 
 ```json
 {
   "name": "Example Product",
-  "modelNumber": "Example Model",
+  "modelNumber": "EXAMPLE-MODEL-001",
   "description": "Example product description"
 }
 ```
 
-Flow:
+The endpoint requires `PRODUCT_MANAGE`. The product is written only to the authenticated customer's Customer DB.
 
-```text
-JWT
-  ↓
-customerPublicId
-  ↓
-Platform DB
-  ↓
-customer_databases
-  ↓
-Customer DB
-  ↓
-users
-  ↓
-Verify authenticated user
-  ↓
-products
-  ↓
-Create product
+### Example: register a device
+
+```http
+POST /api/devices
+Authorization: Bearer <accessToken>
+Content-Type: application/json
 ```
 
-The product is stored only in the authenticated customer's Customer DB.
+```json
+{
+  "deviceName": "Example Temperature Sensor",
+  "serialNumber": "SENSOR-EXAMPLE-001",
+  "modelNumber": "EXAMPLE-MODEL-001",
+  "productPublicId": "<product-public-id>",
+  "remarks": "Example device registration"
+}
+```
 
-The current endpoint authenticates the user but does not yet enforce a permission such as `PRODUCT_MANAGE`. Permission-based authorization is the next stage.
+The endpoint requires `DEVICE_MANAGE`. Device registration also provisions a device-specific MQTT client and returns its connection details. See `docs/MQTT_AND_LIVE_TELEMETRY.md`.
+
+### Authorization failure
+
+If the token is valid but the user does not have the required permission, the API returns `403 Forbidden`:
+
+```json
+{
+  "message": "Access denied."
+}
+```
+
+Missing or invalid/expired JWT authentication returns `401 Unauthorized`.
 
 ---
 
@@ -795,32 +823,20 @@ Expected:
 
 ## 9. Future Authentication Scope
 
-Current flow:
+Current protected-request flow:
 
 ```text
-Login
-  ↓
-JWT
-  ↓
+Request with Bearer JWT
+        ↓
 Authentication Middleware
-  ↓
-Authenticated User Context
-  ↓
-Protected API
-```
-
-Next:
-
-```text
-Authenticated User Context
-  ↓
-Load Customer Roles
-  ↓
-Resolve Permission Codes
-  ↓
-Authorization / permission middleware
-  ↓
-Allow / Deny API Access
+        ↓
+Verify JWT and resolve user/customer context
+        ↓
+Authorization Middleware (when required by route)
+        ↓
+Check required permission
+        ↓
+Allow request or return 403
 ```
 
 Planned authentication/security features:
