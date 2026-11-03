@@ -115,7 +115,11 @@ const createDevice = async (
     return result.insertId;
 };
 
-const getDevices = async (connection, page, pageSize) => {
+const getDevices = async (
+    connection,
+    page,
+    pageSize
+) => {
     const offset = (page - 1) * pageSize;
 
     const [rows] = await connection.execute(

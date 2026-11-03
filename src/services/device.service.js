@@ -12,6 +12,27 @@ const deviceRepository = require(
     '../repositories/device/device.repository'
 );
 
+const deviceDatabaseRouteRepository = require(
+    '../repositories/platform/device-database-route.repository'
+);
+
+const {
+    provisionDeviceMqttAccess,
+    revokeDeviceMqttAccess
+} = require('./mqtt-provisioning.service');
+
+const {
+    getDeviceConnectionState
+} = require('./live-telemetry.service');
+
+const deviceMqttCredentialsRepository = require(
+    '../repositories/platform/device-mqtt-credentials.repository'
+);
+
+const DEVICE_CONNECTION_TIMEOUT_SECONDS = Number(
+    process.env.DEVICE_CONNECTION_TIMEOUT_SECONDS || 120
+);
+
 const createDevice = async (
     data,
     userPublicId,
@@ -122,16 +143,92 @@ const createDevice = async (
             }
         );
 
-    return {
-        deviceId,
-        devicePublicId,
-        deviceCode
-    };
+    let routeCreated = false;
+    let mqttProvisioningAttempted = false;
+
+    try {
+        await deviceDatabaseRouteRepository.createDeviceRoute(
+            deviceCode,
+            customerPublicId
+        );
+
+        routeCreated = true;
+
+        mqttProvisioningAttempted = true;
+
+        const mqttAccess =
+            await provisionDeviceMqttAccess(deviceCode);
+
+        await deviceMqttCredentialsRepository.createDeviceMqttCredentials({
+            deviceCode,
+            host: mqttAccess.mqttHost,
+            port: mqttAccess.mqttPort,
+            clientId: mqttAccess.mqttClientId,
+            username: mqttAccess.mqttUsername,
+            topic: mqttAccess.mqttTopic
+        });
+
+        return {
+            deviceId,
+            devicePublicId,
+            deviceCode,
+            mqtt: mqttAccess
+        };
+    } catch (error) {
+        if (mqttProvisioningAttempted) {
+            try {
+                await revokeDeviceMqttAccess(deviceCode);
+            } catch (cleanupError) {
+                console.error(
+                    'Failed to revoke MQTT access after registration failure:',
+                    cleanupError.message
+                );
+            }
+        }
+
+        try {
+            await deviceMqttCredentialsRepository.deleteDeviceMqttCredentials(
+                deviceCode
+            );
+        } catch (cleanupError) {
+            console.error(
+                'Failed to clean up MQTT metadata:',
+                cleanupError.message
+            );
+        }
+
+        if (routeCreated) {
+            try {
+                await deviceDatabaseRouteRepository.deleteDeviceRoute(
+                    deviceCode
+                );
+            } catch (cleanupError) {
+                console.error(
+                    'Failed to clean up device route:',
+                    cleanupError.message
+                );
+            }
+        }
+
+        try {
+            await customerDb.execute(
+                'DELETE FROM devices WHERE id = ?',
+                [deviceId]
+            );
+        } catch (cleanupError) {
+            console.error(
+                'Failed to clean up device after registration failure:',
+                cleanupError.message
+            );
+        }
+
+        throw error;
+    }
 };
 
 const getDevices = async (
-    userPublicId,
     customerPublicId,
+    userPublicId,
     page,
     pageSize
 ) => {
@@ -152,11 +249,28 @@ const getDevices = async (
         throw error;
     }
 
-    return deviceRepository.getDevices(
+    const result = await deviceRepository.getDevices(
         customerDb,
         page,
         pageSize
     );
+
+    return {
+        ...result,
+        devices: result.devices.map((device) => {
+            const connectionState = getDeviceConnectionState(
+                customerPublicId,
+                device.deviceCode,
+                DEVICE_CONNECTION_TIMEOUT_SECONDS
+            );
+
+            return {
+                ...device,
+                lastSeenAt: connectionState.lastSeenAt,
+                connectionStatus: connectionState.connectionStatus
+            };
+        })
+    };
 };
 
 const getDeviceByPublicId = async (
@@ -193,7 +307,17 @@ const getDeviceByPublicId = async (
         throw error;
     }
 
-    return device;
+    const connectionState = getDeviceConnectionState(
+        customerPublicId,
+        device.deviceCode,
+        DEVICE_CONNECTION_TIMEOUT_SECONDS
+    );
+
+    return {
+        ...device,
+        lastSeenAt: connectionState.lastSeenAt,
+        connectionStatus: connectionState.connectionStatus
+    };
 };
 
 module.exports = {

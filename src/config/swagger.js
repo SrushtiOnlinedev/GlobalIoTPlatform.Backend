@@ -103,6 +103,8 @@ const options = {
                             format: 'password',
                             minLength: 8,
                             maxLength: 100,
+                            description:
+                                'Must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
                             example: 'Password@123'
                         }
                     }
@@ -158,7 +160,9 @@ const options = {
                             example: 'Login successful.'
                         },
                         accessToken: {
-                            type: 'string'
+                            type: 'string',
+                            description: 'JWT access token returned after successful login.',
+                            example: '<jwt-token>'
                         },
                         tokenType: {
                             type: 'string',
@@ -196,7 +200,8 @@ const options = {
                             properties: {
                                 userPublicId: {
                                     type: 'string',
-                                    format: 'uuid'
+                                    format: 'uuid',
+                                    example: '<user-public-id>'
                                 },
                                 name: {
                                     type: 'string',
@@ -229,7 +234,8 @@ const options = {
                                     properties: {
                                         customerPublicId: {
                                             type: 'string',
-                                            format: 'uuid'
+                                            format: 'uuid',
+                                            example: '<customer-public-id>'
                                         },
                                         name: {
                                             type: 'string',
@@ -248,16 +254,14 @@ const options = {
                     example: {
                         message: 'Current user retrieved successfully.',
                         user: {
-                            userPublicId:
-                                '00000000-0000-4000-8000-000000000010',
+                            userPublicId: '<user-public-id>',
                             name: 'Example User',
                             email: 'user@example.com',
                             mobile: '9000000000',
                             userType: 'CUSTOMER_OWNER',
                             accountType: 'End User',
                             customer: {
-                                customerPublicId:
-                                    '00000000-0000-4000-8000-000000000020',
+                                customerPublicId: '<customer-public-id>',
                                 name: 'Example Customer',
                                 email: 'customer@example.com'
                             }
@@ -410,7 +414,8 @@ const options = {
                                 properties: {
                                     productPublicId: {
                                         type: 'string',
-                                        format: 'uuid'
+                                        format: 'uuid',
+                                        example: '<product-public-id>'
                                     },
                                     name: {
                                         type: 'string',
@@ -419,27 +424,26 @@ const options = {
                                     modelNumber: {
                                         type: 'string',
                                         nullable: true,
-                                        example: 'Example Model'
+                                        example: 'EXAMPLE-MODEL'
                                     },
                                     description: {
                                         type: 'string',
                                         nullable: true,
                                         example: 'Example product description'
                                     }
-                                },
-                                example: {
-                                    products: [
-                                        {
-                                            productPublicId:
-                                                '00000000-0000-4000-8000-000000000001',
-                                            name: 'Example Product',
-                                            modelNumber: 'EXAMPLE-MODEL',
-                                            description: 'Example product description'
-                                        }
-                                    ]
                                 }
                             }
                         }
+                    },
+                    example: {
+                        products: [
+                            {
+                                productPublicId: '<product-public-id>',
+                                name: 'Example Product',
+                                modelNumber: 'EXAMPLE-MODEL',
+                                description: 'Example product description'
+                            }
+                        ]
                     }
                 },
 
@@ -477,8 +481,7 @@ const options = {
                             format: 'uuid',
                             description:
                                 'Replace this placeholder with an active productPublicId returned by GET /api/products.',
-                            example:
-                                '00000000-0000-4000-8000-000000000001'
+                            example: '<product-public-id>'
                         },
 
                         organizationPublicId: {
@@ -486,8 +489,7 @@ const options = {
                             format: 'uuid',
                             description:
                                 'Optional. Use an existing organization public ID.',
-                            example:
-                                '00000000-0000-4000-8000-000000000002'
+                            example: '<organization-public-id>'
                         },
 
                         locationPublicId: {
@@ -495,8 +497,7 @@ const options = {
                             format: 'uuid',
                             description:
                                 'Optional. Use an existing location public ID.',
-                            example:
-                                '00000000-0000-4000-8000-000000000003'
+                            example: '<location-public-id>'
                         },
 
                         macAddress: {
@@ -532,19 +533,19 @@ const options = {
                         manufactureDate: {
                             type: 'string',
                             format: 'date',
-                            example: '2000-01-01'
+                            example: '<manufacture-date>'
                         },
 
                         installationDate: {
                             type: 'string',
                             format: 'date',
-                            example: '2000-01-01'
+                            example: '<installation-date>'
                         },
 
                         warrantyExpiry: {
                             type: 'string',
                             format: 'date',
-                            example: '2000-01-01'
+                            example: '<warranty-expiry-date>'
                         },
 
                         remarks: {
@@ -558,9 +559,71 @@ const options = {
                         deviceName: 'Example Device',
                         serialNumber: 'EXAMPLE-SERIAL-001',
                         modelNumber: 'EXAMPLE-MODEL',
-                        productPublicId:
-                            '00000000-0000-4000-8000-000000000001',
+                        productPublicId: '<product-public-id>',
                         remarks: 'Example registration note'
+                    }
+                },
+
+                DeviceRegistrationResponse: {
+                    type: 'object',
+                    required: ['message', 'device', 'mqtt'],
+                    properties: {
+                        message: {
+                            type: 'string',
+                            example: 'Device registered successfully.'
+                        },
+                        device: {
+                            type: 'object',
+                            required: ['devicePublicId', 'deviceCode'],
+                            properties: {
+                                devicePublicId: {
+                                    type: 'string',
+                                    format: 'uuid',
+                                    example: '<device-public-id>'
+                                },
+                                deviceCode: {
+                                    type: 'string',
+                                    example: 'DEV-00000000'
+                                }
+                            }
+                        },
+                        mqtt: {
+                            type: 'object',
+                            required: [
+                                'host',
+                                'port',
+                                'clientId',
+                                'username',
+                                'password',
+                                'topic'
+                            ],
+                            properties: {
+                                host: {
+                                    type: 'string',
+                                    example: 'broker.example.com'
+                                },
+                                port: {
+                                    type: 'integer',
+                                    example: 1884
+                                },
+                                clientId: {
+                                    type: 'string',
+                                    example: 'client-DEV-00000000'
+                                },
+                                username: {
+                                    type: 'string',
+                                    example: 'device-dev-00000000'
+                                },
+                                password: {
+                                    type: 'string',
+                                    example: '<generated-mqtt-password>'
+                                },
+                                topic: {
+                                    type: 'string',
+                                    example: 'devices/DEV-00000000/telemetry'
+                                }
+                            }
+                        }
                     }
                 },
 
@@ -573,28 +636,34 @@ const options = {
                             items: {
                                 type: 'object',
                                 properties: {
-                                    devicePublicId: { type: 'string', format: 'uuid' },
-                                    deviceCode: { type: 'string', example: 'DEV-A1B2C3D4' },
-                                    deviceName: { type: 'string', nullable: true },
-                                    serialNumber: { type: 'string' },
-                                    modelNumber: { type: 'string', nullable: true },
-                                    macAddress: { type: 'string', nullable: true },
-                                    imeiNumber: { type: 'string', nullable: true },
-                                    simNumber: { type: 'string', nullable: true },
-                                    manufactureDate: { type: 'string', format: 'date', nullable: true },
-                                    installationDate: { type: 'string', format: 'date', nullable: true },
-                                    warrantyExpiry: { type: 'string', format: 'date', nullable: true },
+                                    devicePublicId: { type: 'string', format: 'uuid' , example: '<device-public-id>'},
+                                    deviceCode: { type: 'string', example: '<device-code>' },
+                                    deviceName: { type: 'string', nullable: true , example: 'Example Device'},
+                                    serialNumber: { type: 'string' , example: '<serial-number>'},
+                                    modelNumber: { type: 'string', nullable: true , example: '<model-number>'},
+                                    macAddress: { type: 'string', nullable: true , example: '<mac-address>'},
+                                    imeiNumber: { type: 'string', nullable: true , example: '<imei-number>'},
+                                    simNumber: { type: 'string', nullable: true , example: '<sim-number>'},
+                                    manufactureDate: { type: 'string', format: 'date', nullable: true , example: '<manufacture-date>'},
+                                    installationDate: { type: 'string', format: 'date', nullable: true , example: '<installation-date>'},
+                                    warrantyExpiry: { type: 'string', format: 'date', nullable: true , example: '<warranty-expiry-date>'},
                                     status: { type: 'integer', example: 1 },
-                                    remarks: { type: 'string', nullable: true },
-                                    createdAt: { type: 'string', format: 'date-time' },
-                                    updatedAt: { type: 'string', format: 'date-time' },
-                                    productPublicId: { type: 'string', format: 'uuid' },
+                                    lastSeenAt: { type: 'string', format: 'date-time', nullable: true, example: '<last-seen-at-timestamp>'},
+                                    connectionStatus: {
+                                        type: 'string',
+                                        enum: ['Registered', 'Connected', 'Disconnected'],
+                                        example: 'Connected'
+                                    },
+                                    remarks: { type: 'string', nullable: true , example: 'Example registration note'},
+                                    createdAt: { type: 'string', format: 'date-time', example: '<created-at-timestamp>'},
+                                    updatedAt: { type: 'string', format: 'date-time', example: '<updated-at-timestamp>'},
+                                    productPublicId: { type: 'string', format: 'uuid' , example: '<product-public-id>'},
                                     productName: { type: 'string', example: 'Example Product' },
-                                    productModelNumber: { type: 'string', nullable: true },
-                                    organizationPublicId: { type: 'string', format: 'uuid', nullable: true },
-                                    organizationName: { type: 'string', nullable: true },
-                                    locationPublicId: { type: 'string', format: 'uuid', nullable: true },
-                                    locationName: { type: 'string', nullable: true }
+                                    productModelNumber: { type: 'string', nullable: true , example: '<product-model-number>'},
+                                    organizationPublicId: { type: 'string', format: 'uuid', nullable: true , example: '<organization-public-id>'},
+                                    organizationName: { type: 'string', nullable: true , example: '<organization-name>'},
+                                    locationPublicId: { type: 'string', format: 'uuid', nullable: true , example: '<location-public-id>'},
+                                    locationName: { type: 'string', nullable: true , example: '<location-name>'}
                                 }
                             }
                         },
@@ -617,12 +686,11 @@ const options = {
                     example: {
                         devices: [
                             {
-                                devicePublicId:
-                                    '00000000-0000-4000-8000-000000000010',
-                                deviceCode: 'DEV-00000000',
+                                devicePublicId: '<device-public-id>',
+                                deviceCode: '<device-code>',
                                 deviceName: 'Example Device',
-                                serialNumber: 'EXAMPLE-SERIAL-001',
-                                modelNumber: 'EXAMPLE-MODEL',
+                                serialNumber: '<serial-number>',
+                                modelNumber: '<model-number>',
                                 macAddress: null,
                                 imeiNumber: null,
                                 simNumber: null,
@@ -630,13 +698,14 @@ const options = {
                                 installationDate: null,
                                 warrantyExpiry: null,
                                 status: 1,
+                                lastSeenAt: null,
+                                connectionStatus: 'Registered',
                                 remarks: 'Example registration note',
-                                createdAt: '2000-01-01T00:00:00.000Z',
-                                updatedAt: '2000-01-01T00:00:00.000Z',
-                                productPublicId:
-                                    '00000000-0000-4000-8000-000000000001',
+                                createdAt: '<created-at-timestamp>',
+                                updatedAt: '<updated-at-timestamp>',
+                                productPublicId: '<product-public-id>',
                                 productName: 'Example Product',
-                                productModelNumber: 'EXAMPLE-PRODUCT-MODEL',
+                                productModelNumber: '<product-model-number>',
                                 organizationPublicId: null,
                                 organizationName: null,
                                 locationPublicId: null,
@@ -663,39 +732,54 @@ const options = {
                         device: {
                             type: 'object',
                             properties: {
-                                devicePublicId: { type: 'string', format: 'uuid' },
-                                deviceCode: { type: 'string', example: 'DEV-00000000' },
-                                deviceName: { type: 'string', nullable: true },
-                                serialNumber: { type: 'string', example: 'EXAMPLE-SERIAL-001' },
-                                modelNumber: { type: 'string', nullable: true },
-                                macAddress: { type: 'string', nullable: true },
-                                imeiNumber: { type: 'string', nullable: true },
-                                simNumber: { type: 'string', nullable: true },
-                                manufactureDate: { type: 'string', format: 'date', nullable: true },
-                                installationDate: { type: 'string', format: 'date', nullable: true },
-                                warrantyExpiry: { type: 'string', format: 'date', nullable: true },
+                                devicePublicId: { type: 'string', format: 'uuid', example: '<device-public-id>' },
+                                deviceCode: { type: 'string', example: '<device-code>' },
+                                deviceName: { type: 'string', nullable: true, example: 'Example Device' },
+                                serialNumber: { type: 'string', example: '<serial-number>' },
+                                modelNumber: { type: 'string', nullable: true , example: 'Example Model' },
+                                macAddress: { type: 'string', nullable: true , example: '<mac-address>' },
+                                imeiNumber: { type: 'string', nullable: true , example: '<imei-number>' },
+                                simNumber: { type: 'string', nullable: true , example: '<sim-number>'},
+                                manufactureDate: { type: 'string', format: 'date', nullable: true , example: '<manufacture-date>'},
+                                installationDate: { type: 'string', format: 'date', nullable: true , example: '<installation-date>'},
+                                warrantyExpiry: { type: 'string', format: 'date', nullable: true , example: '<warranty-expiry-date>'},
                                 status: { type: 'integer', example: 1 },
-                                remarks: { type: 'string', nullable: true },
-                                createdAt: { type: 'string', format: 'date-time' },
-                                updatedAt: { type: 'string', format: 'date-time' },
-                                productPublicId: { type: 'string', format: 'uuid' },
+                                lastSeenAt: {
+                                    type: 'string',
+                                    format: 'date-time',
+                                    nullable: true,
+                                    example: '<last-seen-at-timestamp>'
+                                },
+                                connectionStatus: {
+                                    type: 'string',
+                                    enum: ['Registered', 'Connected', 'Disconnected'],
+                                    example: 'Registered'
+                                },
+                                remarks: {
+                                    type: 'string',
+                                    nullable: true,
+                                    example: 'Example registration note'
+                                },
+                                createdAt: { type: 'string', format: 'date-time' , example: '<created-at-timestamp>'},
+                                updatedAt: { type: 'string', format: 'date-time' , example: '<updated-at-timestamp>'},
+                                productPublicId: { type: 'string', format: 'uuid', example: '<product-public-id>' },
                                 productName: { type: 'string', example: 'Example Product' },
-                                productModelNumber: { type: 'string', nullable: true },
-                                organizationPublicId: { type: 'string', format: 'uuid', nullable: true },
-                                organizationName: { type: 'string', nullable: true },
-                                locationPublicId: { type: 'string', format: 'uuid', nullable: true },
-                                locationName: { type: 'string', nullable: true }
+                                productModelNumber: { type: 'string', nullable: true , example: '<product-model-number>'},
+                                organizationPublicId: { type: 'string', format: 'uuid', nullable: true , example: '<organization-public-id>'},
+                                organizationName: { type: 'string', nullable: true , example: '<organization-name>'},
+                                locationPublicId: { type: 'string', format: 'uuid', nullable: true , example: '<location-public-id>'},
+                                locationName: { type: 'string', nullable: true , example: '<location-name>'}
                             }
                         }
                     },
                     example: {
                         message: 'Device retrieved successfully.',
                         device: {
-                            devicePublicId: '00000000-0000-4000-8000-000000000010',
-                            deviceCode: 'DEV-00000000',
+                            devicePublicId: '<device-public-id>',
+                            deviceCode: '<device-code>',
                             deviceName: 'Example Device',
-                            serialNumber: 'EXAMPLE-SERIAL-001',
-                            modelNumber: 'EXAMPLE-MODEL',
+                            serialNumber: '<serial-number>',
+                            modelNumber: 'Example Model',
                             macAddress: null,
                             imeiNumber: null,
                             simNumber: null,
@@ -703,12 +787,14 @@ const options = {
                             installationDate: null,
                             warrantyExpiry: null,
                             status: 1,
+                            lastSeenAt: null,
+                            connectionStatus: 'Registered',
                             remarks: 'Example registration note',
-                            createdAt: '2000-01-01T00:00:00.000Z',
-                            updatedAt: '2000-01-01T00:00:00.000Z',
-                            productPublicId: '00000000-0000-4000-8000-000000000001',
+                            createdAt: '<created-at-timestamp>',
+                            updatedAt: '<updated-at-timestamp>',
+                            productPublicId: '<product-public-id>',
                             productName: 'Example Product',
-                            productModelNumber: 'EXAMPLE-PRODUCT-MODEL',
+                            productModelNumber: 'Example Product Model',
                             organizationPublicId: null,
                             organizationName: null,
                             locationPublicId: null,

@@ -6,6 +6,10 @@ const deviceService = require(
     '../services/device.service'
 );
 
+const {
+    subscribeToDeviceTelemetry
+} = require('../services/live-telemetry.service');
+
 const { z } = require('zod');
 
 const createDevice = async (req, res) => {
@@ -29,6 +33,14 @@ const createDevice = async (req, res) => {
             device: {
                 devicePublicId: result.devicePublicId,
                 deviceCode: result.deviceCode
+            },
+            mqtt: {
+                host: result.mqtt.mqttHost,
+                port: result.mqtt.mqttPort,
+                clientId: result.mqtt.mqttClientId,
+                username: result.mqtt.mqttUsername,
+                password: result.mqtt.mqttPassword,
+                topic: result.mqtt.mqttTopic
             }
         });
     } catch (error) {
@@ -104,8 +116,8 @@ const getDevices = async (req, res) => {
         const { userPublicId, customerPublicId } = req.auth;
 
         const result = await deviceService.getDevices(
-            userPublicId,
             customerPublicId,
+            userPublicId,
             page,
             pageSize
         );
@@ -195,8 +207,64 @@ const getDeviceByPublicId = async (req, res) => {
     }
 };
 
+const getLiveDeviceTelemetry = async (req, res) => {
+    try {
+        const { devicePublicId } = z.object({
+            devicePublicId: z.string().uuid()
+        }).parse(req.params);
+
+        const { userPublicId, customerPublicId } = req.auth;
+
+        const device = await deviceService.getDeviceByPublicId(
+            userPublicId,
+            customerPublicId,
+            devicePublicId
+        );
+
+        return subscribeToDeviceTelemetry(
+            customerPublicId,
+            device.deviceCode,
+            res
+        );
+    } catch (error) {
+        if (res.headersSent) {
+            console.error('Live telemetry stream error:', error);
+            return res.end();
+        }
+
+        if (error.name === 'ZodError') {
+            return res.status(400).json({
+                message: 'Validation failed',
+                errors: error.issues.map(issue => ({
+                    field: issue.path.join('.'),
+                    message: issue.message
+                }))
+            });
+        }
+
+        if (error.code === 'USER_NOT_FOUND') {
+            return res.status(404).json({
+                message: 'User not found.'
+            });
+        }
+
+        if (error.code === 'DEVICE_NOT_FOUND') {
+            return res.status(404).json({
+                message: 'Device not found.'
+            });
+        }
+
+        console.error('Live telemetry error:', error);
+
+        return res.status(500).json({
+            message: 'An unexpected error occurred.'
+        });
+    }
+};
+
 module.exports = {
     createDevice,
     getDevices,
-    getDeviceByPublicId
+    getDeviceByPublicId,
+    getLiveDeviceTelemetry
 };

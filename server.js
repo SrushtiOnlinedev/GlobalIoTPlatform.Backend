@@ -7,6 +7,7 @@ const healthRoutes = require('./src/routes/health.routes');
 const authRoutes = require('./src/routes/auth.routes');
 const productRoutes = require('./src/routes/product.routes');
 const deviceRoutes = require('./src/routes/device.routes');
+const { startMqttSubscriber } = require('./src/services/mqtt.service');
 
 const app = express();
 
@@ -22,4 +23,5 @@ app.use('/api/devices', deviceRoutes);
 
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
+    startMqttSubscriber();
 });

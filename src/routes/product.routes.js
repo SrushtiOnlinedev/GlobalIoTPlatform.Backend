@@ -39,6 +39,19 @@ const router = express.Router();
  *               errors:
  *                 - field: name
  *                   message: 'Too small: expected string to have >=2 characters'
+  *       401:
+ *         description: Authentication required or token invalid/expired
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
+ *             examples:
+ *               authenticationRequired:
+ *                 value:
+ *                   message: Authentication required.
+ *               invalidOrExpiredToken:
+ *                 value:
+ *                   message: Invalid or expired token.
  *       403:
  *         description: User does not have the required permission
  *         content:
@@ -95,24 +108,32 @@ router.post(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/MessageResponse'
+ *             example:
+ *               message: 'Authentication required.'
  *       403:
  *         description: Access denied.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/MessageResponse'
+ *             example:
+ *               message: 'Access denied.'
  *       404:
  *         description: User not found.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/MessageResponse'
+ *             example:
+ *               message: 'User not found.'
  *       500:
  *         description: Unexpected server error.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/MessageResponse'
+ *             example:
+ *               message: 'An unexpected error occurred.'
  */
 router.get(
     '/',
