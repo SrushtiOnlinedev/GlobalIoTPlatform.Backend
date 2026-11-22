@@ -21,6 +21,24 @@ const assignPermissions = async (
     }
 };
 
+const replacePermissions = async (
+    connection,
+    roleId,
+    permissionCodes
+) => {
+    await connection.execute(
+        'DELETE FROM role_permissions WHERE role_id = ?',
+        [roleId]
+    );
+
+    await assignPermissions(
+        connection,
+        roleId,
+        permissionCodes
+    );
+};
+
 module.exports = {
-    assignPermissions
+    assignPermissions,
+    replacePermissions
 };
