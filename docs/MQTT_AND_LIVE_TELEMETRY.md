@@ -186,6 +186,14 @@ Requirements:
 
 The client supplies the device public ID, not a device code. The backend retrieves the device record and uses its validated `deviceCode` to subscribe to the correct customer/device stream.
 
+### Customer Role Authorization
+
+The `DEVICE_DATA_VIEW` permission is checked against the authenticated user's assigned customer role permissions.
+
+The device registration API requires `DEVICE_MANAGE`. The live telemetry API requires `DEVICE_DATA_VIEW`.
+
+Customer roles and their permission lists are managed through the Customer Role Management APIs. A role must include the required permission for its users to access the corresponding API.
+
 ### Event format
 
 The endpoint responds with `Content-Type: text/event-stream` and keeps the HTTP connection open. Each reading is sent as an SSE event:

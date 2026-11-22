@@ -17,9 +17,10 @@
 11. Cross-Database Connections
 12. Simple Mental Model
 13. API-to-Database Reference
-14. One-Line Summary
-15. Device APIs
-16. Live Telemetry API
+14. Customer Role Management APIs
+15. One-Line Summary
+16. Device APIs
+17. Live Telemetry API
 
 ---
 
@@ -766,10 +767,68 @@ Remember these four rules:
 | `GET /api/devices/{devicePublicId}` | customer routing | `users`, `products`, `devices` |
 | `GET /api/devices/{devicePublicId}/live` | customer routing, `device_database_routes` (MQTT ingestion path) | `users`, `devices` (validation) |
 | `GET /api/health` | connectivity check only | — |
+| `GET /api/roles/permissions` | `permissions` | — |
+| `POST /api/roles` | `permissions` | `users`, `roles`, `role_permissions` |
+| `GET /api/roles` | — | `users`, `roles`, `role_permissions` |
+| `PUT /api/roles/{rolePublicId}` | `permissions` | `users`, `roles`, `role_permissions` |
+| `PATCH /api/roles/{rolePublicId}/status` | — | `users`, `roles` |
 
 ---
 
-# 14. One-Line Summary
+# 14. Customer Role Management APIs
+
+All Role Management endpoints require:
+- A valid customer JWT.
+- The `ROLE_MANAGE` permission.
+
+## Available Endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/roles/permissions` | Get active platform permissions available for assignment |
+| POST | `/api/roles` | Create a customer role and assign permissions |
+| GET | `/api/roles` | List customer roles with their permission codes |
+| PUT | `/api/roles/{rolePublicId}` | Update a customer role and its permissions |
+| PATCH | `/api/roles/{rolePublicId}/status` | Activate or deactivate a customer role |
+
+## Database Flow
+
+**Get permissions**
+
+The API reads active permission codes from the Platform DB `permissions` table.
+
+**Create role**
+
+1. Validate the request using the create-role DTO.
+2. Verify the authenticated customer user.
+3. Validate requested permission codes against active Platform DB permissions.
+4. Create the role in the Customer DB.
+5. Assign permissions through the Customer DB `role_permissions` table.
+6. Commit the transaction, or roll it back if an operation fails.
+
+**List roles**
+
+The API reads roles and their assigned permission codes from the Customer DB. Inactive roles are also included.
+
+**Update role**
+
+The API validates the request and permissions, loads the role, checks for duplicate names, updates the role, and replaces its permission assignments within a transaction.
+
+**Update role status**
+
+The API accepts status `1` (active) or `0` (inactive) and updates the role in the Customer DB.
+
+## Important Rules
+
+- The `permissions` table in the Platform DB is the source of available permission codes.
+- The Customer DB stores assigned permission codes in `role_permissions.permission_code`.
+- There is no cross-database foreign key between these tables; permissions are matched by code.
+- The system role `Customer Super Admin` cannot be modified or activated/deactivated through these APIs.
+- The `ROLE_MANAGE` permission is added through `database/platform/seed/004_seed_role_manage_permission.sql`.
+
+---
+
+# 15. One-Line Summary
 
 ```text
 Request → Route → Controller → DTO/Middleware → Service → Repository/DB Resolver → Platform DB or Customer DB → Response
@@ -778,7 +837,7 @@ Request → Route → Controller → DTO/Middleware → Service → Repository/D
 
 ---
 
-# 15. Device APIs
+# 16. Device APIs
 
 Device records are stored in the authenticated customer's Customer DB. The Platform DB separately maps each device code to its customer so the MQTT subscriber can route telemetry to the correct Customer DB.
 
@@ -875,7 +934,7 @@ The current connection-state data is held in memory, so it is reset when the bac
 
 ---
 
-# 16. Live Telemetry API
+# 17. Live Telemetry API
 
 Endpoint:
 

@@ -18,27 +18,25 @@
 
 The platform separates global customer authentication data from customer-specific user and role data.
 
-### Current Scope
+### Current authentication scope
 
-- Customer registration
-- Isolated Customer DB provisioning
-- Initial Customer Owner creation
-- Customer-specific `Customer Super Admin` role creation
-- Permission assignment
+- Customer registration and initial customer user creation
+- Customer-specific Super Admin role creation
+- Initial permission assignment
 - Customer login using email and password
 - Password hashing with bcrypt
 - JWT access-token generation
-- JWT authentication middleware
-- Current authenticated user API (`GET /api/auth/me`)
 - Last-login tracking
-- Authorization / permission middleware
-- Permission checks on protected product and device APIs
+- JWT authentication middleware
+- Authenticated current-user API (`GET /api/auth/me`)
+- Permission-based authorization middleware
+- Customer Role Management APIs
 - Swagger / OpenAPI documentation
 
-### Planned Scope
+### Planned authentication features
 
 - Email verification
-- Password reset and password change
+- Password reset and change
 - Logout / session management
 
 ---
@@ -652,8 +650,24 @@ Roles and permissions are not stored in the JWT. Permission checks use the custo
 | `GET` | `/api/devices` | `DEVICE_DATA_VIEW` |
 | `GET` | `/api/devices/{devicePublicId}` | `DEVICE_DATA_VIEW` |
 | `GET` | `/api/devices/{devicePublicId}/live` | `DEVICE_DATA_VIEW` |
+| `GET` | `/api/roles/permissions` | `ROLE_MANAGE` |
+| `POST` | `/api/roles` | `ROLE_MANAGE` |
+| `GET` | `/api/roles` | `ROLE_MANAGE` |
+| `PUT` | `/api/roles/{rolePublicId}` | `ROLE_MANAGE` |
+| `PATCH` | `/api/roles/{rolePublicId}/status` | `ROLE_MANAGE` |
 
 `GET /api/health`, registration, and login do not require a customer Bearer token.
+
+### Customer Role Management Authorization
+
+Customer Role Management APIs require the `ROLE_MANAGE` permission.
+
+- The available permission definitions are retrieved from the Platform Database `permissions` table.
+- Customer roles and their permission assignments are stored in the respective Customer Database.
+- Customer authorization middleware checks the authenticated user's assigned permissions before allowing access.
+- The built-in `Customer Super Admin` role is protected from role updates and status changes.
+
+All five Role Management endpoints use the same `ROLE_MANAGE` permission.
 
 ### Example: create a product
 

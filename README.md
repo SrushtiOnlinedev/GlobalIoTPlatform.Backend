@@ -218,7 +218,8 @@ Current Platform Database seed files:
 database/platform/seed/
 ├── 001_seed_account_types.sql
 ├── 002_seed_permissions.sql
-└── 003_seed_user_types.sql
+├── 003_seed_user_types.sql
+└── 004_seed_role_manage_permission.sql
 ```
 
 ### Customer Database migrations
@@ -262,6 +263,11 @@ Related developer references:
 | `GET` | `/api/devices` | List registered devices | Bearer JWT, `DEVICE_DATA_VIEW` |
 | `GET` | `/api/devices/{devicePublicId}` | Get device details | Bearer JWT, `DEVICE_DATA_VIEW` |
 | `GET` | `/api/devices/{devicePublicId}/live` | Receive a live telemetry SSE stream | Bearer JWT, `DEVICE_DATA_VIEW` |
+| `GET` | `/api/roles/permissions` | Get available active permissions for customer roles | Bearer JWT, `ROLE_MANAGE` |
+| `POST` | `/api/roles` | Create a customer role and assign permissions | Bearer JWT, `ROLE_MANAGE` |
+| `GET` | `/api/roles` | List customer roles with their permission codes | Bearer JWT, `ROLE_MANAGE` |
+| `PUT` | `/api/roles/{rolePublicId}` | Update a customer role and replace its permissions | Bearer JWT, `ROLE_MANAGE` |
+| `PATCH` | `/api/roles/{rolePublicId}/status` | Activate or deactivate a customer role | Bearer JWT, `ROLE_MANAGE` |
 
 Protected REST APIs use:
 
@@ -485,7 +491,8 @@ GlobalIoTPlatform.Backend/
 │       └── seed/
 │           ├── 001_seed_account_types.sql
 │           ├── 002_seed_permissions.sql
-│           └── 003_seed_user_types.sql
+│           ├── 003_seed_user_types.sql
+│           └── 004_seed_role_manage_permission.sql
 │
 ├── docs/
 │   ├── API_FLOW_AND_DATABASE_REFERENCE.md
@@ -506,14 +513,19 @@ GlobalIoTPlatform.Backend/
 │   │   ├── auth.controller.js
 │   │   ├── device.controller.js
 │   │   ├── health.controller.js
-│   │   └── product.controller.js
+│   │   ├── product.controller.js
+│   │   └── role.controller.js
 │   │
 │   ├── dto/
 │   │   ├── auth/
 │   │   │   ├── login.dto.js
 │   │   │   └── register.dto.js
-│   │   └── product/
-│   │       └── create-product.dto.js
+│   │   ├── product/
+│   │   │   └── create-product.dto.js
+│   │   └── role/
+│   │       ├── create-role.dto.js
+│   │       ├── update-role.dto.js
+│   │       └── update-role-status.dto.js
 │   │
 │   ├── middleware/
 │   │   ├── auth.middleware.js
@@ -548,7 +560,8 @@ GlobalIoTPlatform.Backend/
 │   │   ├── auth.routes.js
 │   │   ├── device.routes.js
 │   │   ├── health.routes.js
-│   │   └── product.routes.js
+│   │   ├── product.routes.js
+│   │   └── role.routes.js
 │   │
 │   ├── services/
 │   │   ├── auth.service.js
@@ -560,7 +573,8 @@ GlobalIoTPlatform.Backend/
 │   │   ├── live-telemetry.service.js
 │   │   ├── mqtt-provisioning.service.js
 │   │   ├── mqtt.service.js
-│   │   └── product.service.js
+│   │   ├── product.service.js
+│   │   └── role.service.js
 │   │
 │   └── utils/
 │       └── jwt.util.js
@@ -578,6 +592,12 @@ GlobalIoTPlatform.Backend/
 The following flow has been manually verified in the local development environment:
 
 - Customer registration and login.
+- Customer Role Management APIs:
+  - Get available permissions.
+  - Create customer roles.
+  - List customer roles and their permission codes.
+  - Update customer roles and their permissions.
+  - Activate and deactivate customer roles.
 - Product creation and product listing.
 - Device registration with MQTT credential provisioning.
 - Device listing and device detail retrieval.
@@ -592,8 +612,12 @@ This confirms the tested local flow; it does not by itself mean the broker is co
 
 Potential next modules include:
 
+- Platform Admin authentication and authorization.
+- Platform Admin user management.
+- Customer management APIs for Platform Admins.
+- Account-type upgrade request management APIs.
 - Customer user management APIs.
-- Customer role and role-assignment management APIs.
+- Customer role-assignment management APIs.
 - Organization and location management APIs.
 - Device ownership and access-management APIs.
 - Device commands and control operations.
